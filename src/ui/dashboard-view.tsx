@@ -11,6 +11,7 @@ import {
 	useTerminalDimensions,
 } from "@opentui/solid";
 import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
+import { MapChart } from "./map-chart.tsx";
 import { chartColor, theme } from "./theme.ts";
 
 const GRID_COLS = 12;
@@ -24,6 +25,7 @@ const CHART_SIZES: Partial<Record<string, { w: number; h: number }>> = {
 	widget: { w: 3, h: 2 },
 	pie: { w: 4, h: 4 },
 	list: { w: 4, h: 6 },
+	map: { w: 6, h: 4 },
 };
 const DEFAULT_CHART_SIZE = { w: 4, h: 3 } as const;
 
@@ -394,17 +396,28 @@ function ChartBox(props: {
 			titleAlignment="left"
 			paddingX={1}
 		>
-			<box
-				flexDirection="column"
-				width="100%"
-				height="100%"
-				justifyContent="center"
-				alignItems="center"
+			<Show
+				when={props.chart.chartType === "map"}
+				fallback={
+					<box
+						flexDirection="column"
+						width="100%"
+						height="100%"
+						justifyContent="center"
+						alignItems="center"
+					>
+						<text fg={props.accent} attributes={TextAttributes.BOLD}>
+							{glyph()} {props.chart.chartType}
+						</text>
+					</box>
+				}
 			>
-				<text fg={props.accent} attributes={TextAttributes.BOLD}>
-					{glyph()} {props.chart.chartType}
-				</text>
-			</box>
+				<MapChart
+					accent={props.accent}
+					innerWidth={Math.max(0, width() - 4)}
+					innerHeight={Math.max(0, height() - 2)}
+				/>
+			</Show>
 		</box>
 	);
 }

@@ -12,6 +12,9 @@
 		"@effect/openapi-generator": "^4.0.0-beta.66",
 		"@effect/platform-node": "4.0.0-beta.66",
 		"@types/bun": "latest",
+		"@types/geojson": "^7946.0.16",
+		"@types/topojson-client": "^3.1.5",
+		"@types/topojson-specification": "^1.0.5",
 		"swagger2openapi": "^7.0.8",
 		"yaml": "^2.9.0"
 	},
@@ -23,6 +26,8 @@
 		"@opentui/core": "^0.2.10",
 		"@opentui/solid": "^0.2.10",
 		"effect": "^4.0.0-beta.66",
-		"solid-js": "^1.9.13"
+		"solid-js": "^1.9.13",
+		"topojson-client": "^3.1.0",
+		"world-atlas": "^2.0.2"
 	}
 }
