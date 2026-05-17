@@ -1,0 +1,28 @@
+{
+	"name": "@faststats/cli",
+	"module": "src/index.ts",
+	"type": "module",
+	"private": true,
+	"scripts": {
+		"download-openapi": "curl -o openapi.json http://localhost:4000/openapi.json",
+		"generate": "openapigen --spec openapi.json --format httpclient --name Api > src/api.ts"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.4.15",
+		"@effect/openapi-generator": "^4.0.0-beta.66",
+		"@effect/platform-node": "4.0.0-beta.66",
+		"@types/bun": "latest",
+		"swagger2openapi": "^7.0.8",
+		"yaml": "^2.9.0"
+	},
+	"peerDependencies": {
+		"typescript": "^5"
+	},
+	"dependencies": {
+		"@effect/platform-bun": "^4.0.0-beta.66",
+		"@opentui/core": "^0.2.10",
+		"@opentui/solid": "^0.2.10",
+		"effect": "^4.0.0-beta.66",
+		"solid-js": "^1.9.13"
+	}
+}
