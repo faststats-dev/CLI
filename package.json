@@ -3,7 +3,18 @@
 	"module": "src/index.ts",
 	"type": "module",
 	"private": true,
+	"bin": {
+		"faststats": "./src/index.ts"
+	},
 	"scripts": {
+		"build": "bun run scripts/build.ts",
+		"typecheck": "tsc --noEmit",
+		"completions:fish": "./faststats --completions fish",
+		"completions:zsh": "./faststats --completions zsh",
+		"completions:bash": "./faststats --completions bash",
+		"install:completions": "bun run scripts/install-completions.ts fish",
+		"install:completions:zsh": "bun run scripts/install-completions.ts zsh",
+		"install:completions:bash": "bun run scripts/install-completions.ts bash",
 		"download-openapi": "curl -o openapi.json http://localhost:4000/openapi.json",
 		"generate": "openapigen --spec openapi.json --format httpclient --name Api > src/api.ts"
 	},
@@ -23,8 +34,8 @@
 	},
 	"dependencies": {
 		"@effect/platform-bun": "^4.0.0-beta.66",
-		"@opentui/core": "^0.2.10",
-		"@opentui/solid": "^0.2.10",
+		"@opentui/core": "^0.2.14",
+		"@opentui/solid": "^0.2.14",
 		"effect": "^4.0.0-beta.66",
 		"solid-js": "^1.9.13",
 		"topojson-client": "^3.1.0",

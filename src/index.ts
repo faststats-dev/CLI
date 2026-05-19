@@ -1,17 +1,13 @@
 import { BunHttpClient, BunRuntime, BunServices } from "@effect/platform-bun";
-import { Effect } from "effect";
+import { Effect, Layer } from "effect";
 import { Command } from "effect/unstable/cli";
-import { greetCommand } from "./commands/greet.ts";
-import { projectsCommand } from "./commands/projects.ts";
-import { testCommand } from "./commands/test.ts";
+import { buildRootCommand } from "./root-command.ts";
 
-const cli = Command.make("app", {}, () => Effect.void).pipe(
-	Command.withSubcommands([greetCommand, testCommand, projectsCommand]),
-);
+const program = Effect.gen(function* () {
+	const cli = yield* buildRootCommand;
+	yield* Command.run(cli, { version: "1.0.0" });
+});
 
-cli.pipe(
-	Command.run({ version: "1.0.0" }),
-	Effect.provide(BunServices.layer),
-	Effect.provide(BunHttpClient.layer),
-	BunRuntime.runMain,
-);
+const MainLayer = Layer.mergeAll(BunServices.layer, BunHttpClient.layer);
+
+program.pipe(Effect.provide(MainLayer), BunRuntime.runMain);

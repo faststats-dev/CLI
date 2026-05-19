@@ -5,7 +5,7 @@ import {
 } from "@opentui/core";
 import { render, useKeyboard, useRenderer } from "@opentui/solid";
 import { createSignal, For } from "solid-js";
-import type { Metric, Project, Trend } from "../data/mock-projects.ts";
+import type { Metric, Project, Trend } from "../data/project.ts";
 import { chartColor, theme } from "./theme.ts";
 
 interface Column {

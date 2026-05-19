@@ -1,7 +1,7 @@
 import { Console, Effect } from "effect";
 import { Command } from "effect/unstable/cli";
 import { FastStatsApi } from "../api-client.ts";
-import type { Project } from "../data/mock-projects.ts";
+import type { Project } from "../data/project.ts";
 import {
 	type ChartLite,
 	type DashboardLite,
@@ -75,7 +75,7 @@ export const projectsCommand = Command.make("projects", {}, () =>
 			);
 		}
 	}),
-);
+).pipe(Command.withDescription("Browse projects in the terminal UI"));
 
 function toGridPosition(
 	pos:

@@ -2,22 +2,25 @@ import { Data, Effect } from "effect";
 import * as HttpClient from "effect/unstable/http/HttpClient";
 import * as HttpClientRequest from "effect/unstable/http/HttpClientRequest";
 import * as Api from "./api.ts";
+import { loadConfig, resolveCredentials } from "./config.ts";
 
 export class MissingApiKeyError extends Data.TaggedError("MissingApiKeyError")<{
 	readonly variable: string;
 }> {}
 
 export const FastStatsApi = Effect.gen(function* () {
-	const apiKey = process.env.FASTSTATS_API_KEY;
-	if (!apiKey) {
-		return yield* new MissingApiKeyError({ variable: "FASTSTATS_API_KEY" });
-	}
+	const fileConfig = yield* loadConfig;
+	const { apiKey, apiUrl } = resolveCredentials(fileConfig);
 
-	const baseUrl = process.env.FASTSTATS_API_URL ?? "http://localhost:4000";
+	if (!apiKey) {
+		return yield* new MissingApiKeyError({
+			variable: "FASTSTATS_API_KEY or ~/.config/faststats/config.json",
+		});
+	}
 
 	const httpClient = yield* HttpClient.HttpClient;
 	const configured = httpClient.pipe(
-		HttpClient.mapRequest(HttpClientRequest.prependUrl(baseUrl)),
+		HttpClient.mapRequest(HttpClientRequest.prependUrl(apiUrl)),
 		HttpClient.mapRequest(HttpClientRequest.setHeader("x-api-key", apiKey)),
 	);
 
