@@ -20,23 +20,20 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.4.15",
-		"@effect/openapi-generator": "^4.0.0-beta.66",
-		"@effect/platform-node": "4.0.0-beta.66",
+		"@effect/openapi-generator": "^4.0.0-beta.68",
 		"@types/bun": "latest",
 		"@types/geojson": "^7946.0.16",
 		"@types/topojson-client": "^3.1.5",
-		"@types/topojson-specification": "^1.0.5",
-		"swagger2openapi": "^7.0.8",
-		"yaml": "^2.9.0"
+		"@types/topojson-specification": "^1.0.5"
 	},
 	"peerDependencies": {
 		"typescript": "^5"
 	},
 	"dependencies": {
-		"@effect/platform-bun": "^4.0.0-beta.66",
+		"@effect/platform-bun": "^4.0.0-beta.68",
 		"@opentui/core": "^0.2.14",
 		"@opentui/solid": "^0.2.14",
-		"effect": "^4.0.0-beta.66",
+		"effect": "^4.0.0-beta.68",
 		"solid-js": "^1.9.13",
 		"topojson-client": "^3.1.0",
 		"world-atlas": "^2.0.2"
