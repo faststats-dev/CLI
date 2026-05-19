@@ -35,6 +35,10 @@ export type FunnelValidationError = { readonly "_tag": "FunnelValidationError", 
 export const FunnelValidationError = Schema.Struct({ "_tag": Schema.Literal("FunnelValidationError"), "message": Schema.String })
 export type FunnelStepResult = { readonly "count": number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN", readonly "conversionRate": number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN", readonly "dropOffRate": number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN" }
 export const FunnelStepResult = Schema.Struct({ "count": Schema.Union([Schema.Union([Schema.Number.check(Schema.isFinite()), Schema.Literal("NaN"), Schema.Literal("Infinity"), Schema.Literal("-Infinity")]), Schema.Literals(["Infinity", "-Infinity", "NaN"])]), "conversionRate": Schema.Union([Schema.Union([Schema.Number.check(Schema.isFinite()), Schema.Literal("NaN"), Schema.Literal("Infinity"), Schema.Literal("-Infinity")]), Schema.Literals(["Infinity", "-Infinity", "NaN"])]), "dropOffRate": Schema.Union([Schema.Union([Schema.Number.check(Schema.isFinite()), Schema.Literal("NaN"), Schema.Literal("Infinity"), Schema.Literal("-Infinity")]), Schema.Literals(["Infinity", "-Infinity", "NaN"])]) })
+export type NetworkRuleRecord = { readonly "id": string, readonly "projectId": string, readonly "ipAddress": string, readonly "allowed": boolean, readonly "createdAt": string }
+export const NetworkRuleRecord = Schema.Struct({ "id": Schema.String, "projectId": Schema.String, "ipAddress": Schema.String, "allowed": Schema.Boolean, "createdAt": Schema.String })
+export type NetworkRuleValidationError = { readonly "_tag": "NetworkRuleValidationError", readonly "message": string }
+export const NetworkRuleValidationError = Schema.Struct({ "_tag": Schema.Literal("NetworkRuleValidationError"), "message": Schema.String })
 export type ProjectValidationError = { readonly "_tag": "ProjectValidationError", readonly "message": string }
 export const ProjectValidationError = Schema.Struct({ "_tag": Schema.Literal("ProjectValidationError"), "message": Schema.String })
 export type ProjectConflictError = { readonly "_tag": "ProjectConflictError", readonly "message": string }
@@ -256,6 +260,36 @@ export type FunnelsDuplicateFunnel403 = ForbiddenError
 export const FunnelsDuplicateFunnel403 = ForbiddenError
 export type FunnelsDuplicateFunnel404 = NotFoundError
 export const FunnelsDuplicateFunnel404 = NotFoundError
+export type NetworkRulesListNetworkRules200 = ReadonlyArray<NetworkRuleRecord>
+export const NetworkRulesListNetworkRules200 = Schema.Array(NetworkRuleRecord)
+export type NetworkRulesListNetworkRules400 = NetworkRuleValidationError
+export const NetworkRulesListNetworkRules400 = NetworkRuleValidationError
+export type NetworkRulesListNetworkRules401 = UnauthorizedError
+export const NetworkRulesListNetworkRules401 = UnauthorizedError
+export type NetworkRulesListNetworkRules403 = ForbiddenError
+export const NetworkRulesListNetworkRules403 = ForbiddenError
+export type NetworkRulesListNetworkRules404 = NotFoundError
+export const NetworkRulesListNetworkRules404 = NotFoundError
+export type NetworkRulesCreateNetworkRuleRequestJson = { readonly "ipAddress": string, readonly "allowed": boolean }
+export const NetworkRulesCreateNetworkRuleRequestJson = Schema.Struct({ "ipAddress": Schema.String, "allowed": Schema.Boolean })
+export type NetworkRulesCreateNetworkRule200 = NetworkRuleRecord
+export const NetworkRulesCreateNetworkRule200 = NetworkRuleRecord
+export type NetworkRulesCreateNetworkRule400 = NetworkRuleValidationError
+export const NetworkRulesCreateNetworkRule400 = NetworkRuleValidationError
+export type NetworkRulesCreateNetworkRule401 = UnauthorizedError
+export const NetworkRulesCreateNetworkRule401 = UnauthorizedError
+export type NetworkRulesCreateNetworkRule403 = ForbiddenError
+export const NetworkRulesCreateNetworkRule403 = ForbiddenError
+export type NetworkRulesCreateNetworkRule404 = NotFoundError
+export const NetworkRulesCreateNetworkRule404 = NotFoundError
+export type NetworkRulesDeleteNetworkRule400 = NetworkRuleValidationError
+export const NetworkRulesDeleteNetworkRule400 = NetworkRuleValidationError
+export type NetworkRulesDeleteNetworkRule401 = UnauthorizedError
+export const NetworkRulesDeleteNetworkRule401 = UnauthorizedError
+export type NetworkRulesDeleteNetworkRule403 = ForbiddenError
+export const NetworkRulesDeleteNetworkRule403 = ForbiddenError
+export type NetworkRulesDeleteNetworkRule404 = NotFoundError
+export const NetworkRulesDeleteNetworkRule404 = NotFoundError
 export type ProjectsListProjectsParams = { readonly "ownerId"?: string | null, readonly "projectId"?: string | null, readonly "slug"?: string | null, readonly "search"?: string | null, readonly "limit"?: string | null, readonly "offset"?: string | null }
 export const ProjectsListProjectsParams = Schema.Struct({ "ownerId": Schema.optionalKey(Schema.Union([Schema.String, Schema.Null])), "projectId": Schema.optionalKey(Schema.Union([Schema.String, Schema.Null])), "slug": Schema.optionalKey(Schema.Union([Schema.String, Schema.Null])), "search": Schema.optionalKey(Schema.Union([Schema.String, Schema.Null])), "limit": Schema.optionalKey(Schema.Union([Schema.String, Schema.Null])), "offset": Schema.optionalKey(Schema.Union([Schema.String, Schema.Null])) })
 export type ProjectsListProjects200 = { readonly "items": ReadonlyArray<{ readonly "id": string, readonly "name": string, readonly "errorTrackingEnabled": boolean, readonly "webVitalsEnabled": boolean, readonly "sessionReplaysEnabled": boolean, readonly "slug": string, readonly "private": boolean, readonly "templateId": string | null, readonly "createdAt": string, readonly "firstEventAt": string | null, readonly "ownerId": string, readonly "preferredChartColors": ReadonlyArray<string> | null }>, readonly "total": number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN", readonly "limit": number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN", readonly "offset": number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN", readonly "hasMore": boolean }
@@ -478,7 +512,7 @@ export const make = (
       )
   return {
     httpClient,
-    "ChartsListCharts": (projectIdOrSlug, options) => HttpClientRequest.get(`/v0/project/${projectIdOrSlug}/charts`).pipe(
+    "ChartsListCharts": (idOrSlug, options) => HttpClientRequest.get(`/v0/project/${idOrSlug}/charts`).pipe(
     HttpClientRequest.setUrlParams({ "dashboardId": options?.params?.["dashboardId"] as any, "chartId": options?.params?.["chartId"] as any }),
     withResponse(options?.config)(HttpClientResponse.matchStatus({
       "2xx": decodeSuccess(ChartsListCharts200),
@@ -489,7 +523,7 @@ export const make = (
       orElse: unexpectedStatus
     }))
   ),
-    "ChartsCreateChart": (projectIdOrSlug, options) => HttpClientRequest.post(`/v0/project/${projectIdOrSlug}/charts`).pipe(
+    "ChartsCreateChart": (idOrSlug, options) => HttpClientRequest.post(`/v0/project/${idOrSlug}/charts`).pipe(
     HttpClientRequest.bodyJsonUnsafe(options.payload),
     withResponse(options.config)(HttpClientResponse.matchStatus({
       "400": decodeError("ChartsCreateChart400", ChartsCreateChart400),
@@ -500,7 +534,7 @@ export const make = (
       orElse: unexpectedStatus
     }))
   ),
-    "ChartsDeleteChart": (projectIdOrSlug, id, options) => HttpClientRequest.delete(`/v0/project/${projectIdOrSlug}/charts/${id}`).pipe(
+    "ChartsDeleteChart": (idOrSlug, id, options) => HttpClientRequest.delete(`/v0/project/${idOrSlug}/charts/${id}`).pipe(
     withResponse(options?.config)(HttpClientResponse.matchStatus({
       "400": decodeError("ChartsDeleteChart400", ChartsDeleteChart400),
       "401": decodeError("ChartsDeleteChart401", ChartsDeleteChart401),
@@ -510,7 +544,7 @@ export const make = (
       orElse: unexpectedStatus
     }))
   ),
-    "ChartsUpdateChart": (projectIdOrSlug, id, options) => HttpClientRequest.patch(`/v0/project/${projectIdOrSlug}/charts/${id}`).pipe(
+    "ChartsUpdateChart": (idOrSlug, id, options) => HttpClientRequest.patch(`/v0/project/${idOrSlug}/charts/${id}`).pipe(
     HttpClientRequest.bodyJsonUnsafe(options.payload),
     withResponse(options.config)(HttpClientResponse.matchStatus({
       "400": decodeError("ChartsUpdateChart400", ChartsUpdateChart400),
@@ -521,7 +555,7 @@ export const make = (
       orElse: unexpectedStatus
     }))
   ),
-    "DashboardsListDashboards": (projectIdOrSlug, options) => HttpClientRequest.get(`/v0/project/${projectIdOrSlug}/dashboards`).pipe(
+    "DashboardsListDashboards": (idOrSlug, options) => HttpClientRequest.get(`/v0/project/${idOrSlug}/dashboards`).pipe(
     withResponse(options?.config)(HttpClientResponse.matchStatus({
       "2xx": decodeSuccess(DashboardsListDashboards200),
       "400": decodeError("DashboardsListDashboards400", DashboardsListDashboards400),
@@ -531,7 +565,7 @@ export const make = (
       orElse: unexpectedStatus
     }))
   ),
-    "DashboardsCreateDashboard": (projectIdOrSlug, options) => HttpClientRequest.post(`/v0/project/${projectIdOrSlug}/dashboards`).pipe(
+    "DashboardsCreateDashboard": (idOrSlug, options) => HttpClientRequest.post(`/v0/project/${idOrSlug}/dashboards`).pipe(
     HttpClientRequest.bodyJsonUnsafe(options.payload),
     withResponse(options.config)(HttpClientResponse.matchStatus({
       "2xx": decodeSuccess(DashboardsCreateDashboard200),
@@ -542,7 +576,7 @@ export const make = (
       orElse: unexpectedStatus
     }))
   ),
-    "DashboardsReorderDashboards": (projectIdOrSlug, options) => HttpClientRequest.patch(`/v0/project/${projectIdOrSlug}/dashboards/reorder`).pipe(
+    "DashboardsReorderDashboards": (idOrSlug, options) => HttpClientRequest.patch(`/v0/project/${idOrSlug}/dashboards/reorder`).pipe(
     HttpClientRequest.bodyJsonUnsafe(options.payload),
     withResponse(options.config)(HttpClientResponse.matchStatus({
       "400": decodeError("DashboardsReorderDashboards400", DashboardsReorderDashboards400),
@@ -553,7 +587,7 @@ export const make = (
       orElse: unexpectedStatus
     }))
   ),
-    "DashboardsDuplicateDashboard": (projectIdOrSlug, id, options) => HttpClientRequest.post(`/v0/project/${projectIdOrSlug}/dashboards/${id}/duplicate`).pipe(
+    "DashboardsDuplicateDashboard": (idOrSlug, id, options) => HttpClientRequest.post(`/v0/project/${idOrSlug}/dashboards/${id}/duplicate`).pipe(
     withResponse(options?.config)(HttpClientResponse.matchStatus({
       "2xx": decodeSuccess(DashboardsDuplicateDashboard200),
       "400": decodeError("DashboardsDuplicateDashboard400", DashboardsDuplicateDashboard400),
@@ -563,7 +597,7 @@ export const make = (
       orElse: unexpectedStatus
     }))
   ),
-    "DashboardsCopyDashboard": (projectIdOrSlug, id, options) => HttpClientRequest.post(`/v0/project/${projectIdOrSlug}/dashboards/${id}/copy`).pipe(
+    "DashboardsCopyDashboard": (idOrSlug, id, options) => HttpClientRequest.post(`/v0/project/${idOrSlug}/dashboards/${id}/copy`).pipe(
     HttpClientRequest.bodyJsonUnsafe(options.payload),
     withResponse(options.config)(HttpClientResponse.matchStatus({
       "2xx": decodeSuccess(DashboardsCopyDashboard200),
@@ -574,7 +608,7 @@ export const make = (
       orElse: unexpectedStatus
     }))
   ),
-    "DashboardsDeleteDashboard": (projectIdOrSlug, id, options) => HttpClientRequest.delete(`/v0/project/${projectIdOrSlug}/dashboards/${id}`).pipe(
+    "DashboardsDeleteDashboard": (idOrSlug, id, options) => HttpClientRequest.delete(`/v0/project/${idOrSlug}/dashboards/${id}`).pipe(
     withResponse(options?.config)(HttpClientResponse.matchStatus({
       "400": decodeError("DashboardsDeleteDashboard400", DashboardsDeleteDashboard400),
       "401": decodeError("DashboardsDeleteDashboard401", DashboardsDeleteDashboard401),
@@ -584,7 +618,7 @@ export const make = (
       orElse: unexpectedStatus
     }))
   ),
-    "DashboardsUpdateDashboard": (projectIdOrSlug, id, options) => HttpClientRequest.patch(`/v0/project/${projectIdOrSlug}/dashboards/${id}`).pipe(
+    "DashboardsUpdateDashboard": (idOrSlug, id, options) => HttpClientRequest.patch(`/v0/project/${idOrSlug}/dashboards/${id}`).pipe(
     HttpClientRequest.bodyJsonUnsafe(options.payload),
     withResponse(options.config)(HttpClientResponse.matchStatus({
       "2xx": decodeSuccess(DashboardsUpdateDashboard200),
@@ -595,7 +629,7 @@ export const make = (
       orElse: unexpectedStatus
     }))
   ),
-    "DownloadsGetDownloadAnalytics": (projectIdOrSlug, options) => HttpClientRequest.get(`/v0/project/${projectIdOrSlug}/downloads`).pipe(
+    "DownloadsGetDownloadAnalytics": (idOrSlug, options) => HttpClientRequest.get(`/v0/project/${idOrSlug}/downloads`).pipe(
     HttpClientRequest.setUrlParams({ "dateFrom": options?.params?.["dateFrom"] as any, "dateTo": options?.params?.["dateTo"] as any, "versionNumber": options?.params?.["versionNumber"] as any, "granularity": options?.params?.["granularity"] as any }),
     withResponse(options?.config)(HttpClientResponse.matchStatus({
       "2xx": decodeSuccess(DownloadsGetDownloadAnalytics200),
@@ -605,7 +639,7 @@ export const make = (
       orElse: unexpectedStatus
     }))
   ),
-    "EventExplorerGetEventExplorerRows": (projectIdOrSlug, options) => HttpClientRequest.get(`/v0/project/${projectIdOrSlug}/events`).pipe(
+    "EventExplorerGetEventExplorerRows": (idOrSlug, options) => HttpClientRequest.get(`/v0/project/${idOrSlug}/events`).pipe(
     HttpClientRequest.setUrlParams({ "templateId": options?.params?.["templateId"] as any, "mode": options?.params?.["mode"] as any, "page": options?.params?.["page"] as any, "pageSize": options?.params?.["pageSize"] as any, "fromTime": options?.params?.["fromTime"] as any, "toTime": options?.params?.["toTime"] as any }),
     withResponse(options?.config)(HttpClientResponse.matchStatus({
       "2xx": decodeSuccess(EventExplorerGetEventExplorerRows200),
@@ -615,7 +649,7 @@ export const make = (
       orElse: unexpectedStatus
     }))
   ),
-    "FunnelsListFunnels": (projectIdOrSlug, options) => HttpClientRequest.get(`/v0/project/${projectIdOrSlug}/funnels`).pipe(
+    "FunnelsListFunnels": (idOrSlug, options) => HttpClientRequest.get(`/v0/project/${idOrSlug}/funnels`).pipe(
     withResponse(options?.config)(HttpClientResponse.matchStatus({
       "2xx": decodeSuccess(FunnelsListFunnels200),
       "400": decodeError("FunnelsListFunnels400", FunnelsListFunnels400),
@@ -625,7 +659,7 @@ export const make = (
       orElse: unexpectedStatus
     }))
   ),
-    "FunnelsCreateFunnel": (projectIdOrSlug, options) => HttpClientRequest.post(`/v0/project/${projectIdOrSlug}/funnels`).pipe(
+    "FunnelsCreateFunnel": (idOrSlug, options) => HttpClientRequest.post(`/v0/project/${idOrSlug}/funnels`).pipe(
     HttpClientRequest.bodyJsonUnsafe(options.payload),
     withResponse(options.config)(HttpClientResponse.matchStatus({
       "2xx": decodeSuccess(FunnelsCreateFunnel200),
@@ -636,7 +670,7 @@ export const make = (
       orElse: unexpectedStatus
     }))
   ),
-    "FunnelsGetFunnel": (projectIdOrSlug, id, options) => HttpClientRequest.get(`/v0/project/${projectIdOrSlug}/funnels/${id}`).pipe(
+    "FunnelsGetFunnel": (idOrSlug, id, options) => HttpClientRequest.get(`/v0/project/${idOrSlug}/funnels/${id}`).pipe(
     withResponse(options?.config)(HttpClientResponse.matchStatus({
       "2xx": decodeSuccess(FunnelsGetFunnel200),
       "400": decodeError("FunnelsGetFunnel400", FunnelsGetFunnel400),
@@ -646,7 +680,7 @@ export const make = (
       orElse: unexpectedStatus
     }))
   ),
-    "FunnelsDeleteFunnel": (projectIdOrSlug, id, options) => HttpClientRequest.delete(`/v0/project/${projectIdOrSlug}/funnels/${id}`).pipe(
+    "FunnelsDeleteFunnel": (idOrSlug, id, options) => HttpClientRequest.delete(`/v0/project/${idOrSlug}/funnels/${id}`).pipe(
     withResponse(options?.config)(HttpClientResponse.matchStatus({
       "400": decodeError("FunnelsDeleteFunnel400", FunnelsDeleteFunnel400),
       "401": decodeError("FunnelsDeleteFunnel401", FunnelsDeleteFunnel401),
@@ -656,7 +690,7 @@ export const make = (
       orElse: unexpectedStatus
     }))
   ),
-    "FunnelsUpdateFunnel": (projectIdOrSlug, id, options) => HttpClientRequest.patch(`/v0/project/${projectIdOrSlug}/funnels/${id}`).pipe(
+    "FunnelsUpdateFunnel": (idOrSlug, id, options) => HttpClientRequest.patch(`/v0/project/${idOrSlug}/funnels/${id}`).pipe(
     HttpClientRequest.bodyJsonUnsafe(options.payload),
     withResponse(options.config)(HttpClientResponse.matchStatus({
       "2xx": decodeSuccess(FunnelsUpdateFunnel200),
@@ -667,13 +701,44 @@ export const make = (
       orElse: unexpectedStatus
     }))
   ),
-    "FunnelsDuplicateFunnel": (projectIdOrSlug, id, options) => HttpClientRequest.post(`/v0/project/${projectIdOrSlug}/funnels/${id}/duplicate`).pipe(
+    "FunnelsDuplicateFunnel": (idOrSlug, id, options) => HttpClientRequest.post(`/v0/project/${idOrSlug}/funnels/${id}/duplicate`).pipe(
     withResponse(options?.config)(HttpClientResponse.matchStatus({
       "2xx": decodeSuccess(FunnelsDuplicateFunnel200),
       "400": decodeError("FunnelsDuplicateFunnel400", FunnelsDuplicateFunnel400),
       "401": decodeError("FunnelsDuplicateFunnel401", FunnelsDuplicateFunnel401),
       "403": decodeError("FunnelsDuplicateFunnel403", FunnelsDuplicateFunnel403),
       "404": decodeError("FunnelsDuplicateFunnel404", FunnelsDuplicateFunnel404),
+      orElse: unexpectedStatus
+    }))
+  ),
+    "NetworkRulesListNetworkRules": (idOrSlug, options) => HttpClientRequest.get(`/v0/project/${idOrSlug}/network-rules`).pipe(
+    withResponse(options?.config)(HttpClientResponse.matchStatus({
+      "2xx": decodeSuccess(NetworkRulesListNetworkRules200),
+      "400": decodeError("NetworkRulesListNetworkRules400", NetworkRulesListNetworkRules400),
+      "401": decodeError("NetworkRulesListNetworkRules401", NetworkRulesListNetworkRules401),
+      "403": decodeError("NetworkRulesListNetworkRules403", NetworkRulesListNetworkRules403),
+      "404": decodeError("NetworkRulesListNetworkRules404", NetworkRulesListNetworkRules404),
+      orElse: unexpectedStatus
+    }))
+  ),
+    "NetworkRulesCreateNetworkRule": (idOrSlug, options) => HttpClientRequest.post(`/v0/project/${idOrSlug}/network-rules`).pipe(
+    HttpClientRequest.bodyJsonUnsafe(options.payload),
+    withResponse(options.config)(HttpClientResponse.matchStatus({
+      "2xx": decodeSuccess(NetworkRulesCreateNetworkRule200),
+      "400": decodeError("NetworkRulesCreateNetworkRule400", NetworkRulesCreateNetworkRule400),
+      "401": decodeError("NetworkRulesCreateNetworkRule401", NetworkRulesCreateNetworkRule401),
+      "403": decodeError("NetworkRulesCreateNetworkRule403", NetworkRulesCreateNetworkRule403),
+      "404": decodeError("NetworkRulesCreateNetworkRule404", NetworkRulesCreateNetworkRule404),
+      orElse: unexpectedStatus
+    }))
+  ),
+    "NetworkRulesDeleteNetworkRule": (idOrSlug, id, options) => HttpClientRequest.delete(`/v0/project/${idOrSlug}/network-rules/${id}`).pipe(
+    withResponse(options?.config)(HttpClientResponse.matchStatus({
+      "400": decodeError("NetworkRulesDeleteNetworkRule400", NetworkRulesDeleteNetworkRule400),
+      "401": decodeError("NetworkRulesDeleteNetworkRule401", NetworkRulesDeleteNetworkRule401),
+      "403": decodeError("NetworkRulesDeleteNetworkRule403", NetworkRulesDeleteNetworkRule403),
+      "404": decodeError("NetworkRulesDeleteNetworkRule404", NetworkRulesDeleteNetworkRule404),
+      "204": () => Effect.void,
       orElse: unexpectedStatus
     }))
   ),
@@ -774,7 +839,7 @@ export const make = (
       orElse: unexpectedStatus
     }))
   ),
-    "RetentionGetRetentionForProject": (projectIdOrSlug, options) => HttpClientRequest.get(`/v0/project/${projectIdOrSlug}/retention`).pipe(
+    "RetentionGetRetentionForProject": (idOrSlug, options) => HttpClientRequest.get(`/v0/project/${idOrSlug}/retention`).pipe(
     HttpClientRequest.setUrlParams({ "granularity": options.params["granularity"] as any, "cohortFrom": options.params["cohortFrom"] as any, "cohortTo": options.params["cohortTo"] as any, "periodCount": options.params["periodCount"] as any, "filters": options.params["filters"] as any, "filterMatch": options.params["filterMatch"] as any, "source": options.params["source"] as any }),
     withResponse(options.config)(HttpClientResponse.matchStatus({
       "2xx": decodeSuccess(RetentionGetRetentionForProject200),
@@ -784,7 +849,7 @@ export const make = (
       orElse: unexpectedStatus
     }))
   ),
-    "RetentionGetRetentionDriversForProject": (projectIdOrSlug, options) => HttpClientRequest.get(`/v0/project/${projectIdOrSlug}/retention/drivers`).pipe(
+    "RetentionGetRetentionDriversForProject": (idOrSlug, options) => HttpClientRequest.get(`/v0/project/${idOrSlug}/retention/drivers`).pipe(
     HttpClientRequest.setUrlParams({ "granularity": options.params["granularity"] as any, "cohortFrom": options.params["cohortFrom"] as any, "cohortTo": options.params["cohortTo"] as any, "targetPeriod": options.params["targetPeriod"] as any, "source": options.params["source"] as any, "minSegmentUsers": options.params["minSegmentUsers"] as any }),
     withResponse(options.config)(HttpClientResponse.matchStatus({
       "2xx": decodeSuccess(RetentionGetRetentionDriversForProject200),
@@ -800,7 +865,7 @@ export const make = (
       orElse: unexpectedStatus
     }))
   ),
-    "WebVitalsGetWebVitalsForProject": (projectIdOrSlug, options) => HttpClientRequest.get(`/v0/project/${projectIdOrSlug}/vitals`).pipe(
+    "WebVitalsGetWebVitalsForProject": (idOrSlug, options) => HttpClientRequest.get(`/v0/project/${idOrSlug}/vitals`).pipe(
     HttpClientRequest.setUrlParams({ "from": options?.params?.["from"] as any, "to": options?.params?.["to"] as any }),
     withResponse(options?.config)(HttpClientResponse.matchStatus({
       "2xx": decodeSuccess(WebVitalsGetWebVitalsForProject200),
@@ -810,7 +875,7 @@ export const make = (
       orElse: unexpectedStatus
     }))
   ),
-    "WebVitalsGetBuildDeploymentsForProject": (projectIdOrSlug, options) => HttpClientRequest.get(`/v0/project/${projectIdOrSlug}/vitals/build-deployments`).pipe(
+    "WebVitalsGetBuildDeploymentsForProject": (idOrSlug, options) => HttpClientRequest.get(`/v0/project/${idOrSlug}/vitals/build-deployments`).pipe(
     HttpClientRequest.setUrlParams({ "from": options?.params?.["from"] as any, "to": options?.params?.["to"] as any }),
     withResponse(options?.config)(HttpClientResponse.matchStatus({
       "2xx": decodeSuccess(WebVitalsGetBuildDeploymentsForProject200),
@@ -820,7 +885,7 @@ export const make = (
       orElse: unexpectedStatus
     }))
   ),
-    "WebVitalsGetWebVitalsTrends": (projectIdOrSlug, options) => HttpClientRequest.get(`/v0/project/${projectIdOrSlug}/vitals/trends`).pipe(
+    "WebVitalsGetWebVitalsTrends": (idOrSlug, options) => HttpClientRequest.get(`/v0/project/${idOrSlug}/vitals/trends`).pipe(
     HttpClientRequest.setUrlParams({ "from": options?.params?.["from"] as any, "to": options?.params?.["to"] as any, "bucketMs": options?.params?.["bucketMs"] as any, "device": options?.params?.["device"] as any, "browser": options?.params?.["browser"] as any, "os": options?.params?.["os"] as any, "country": options?.params?.["country"] as any, "route": options?.params?.["route"] as any }),
     withResponse(options?.config)(HttpClientResponse.matchStatus({
       "2xx": decodeSuccess(WebVitalsGetWebVitalsTrends200),
@@ -835,25 +900,28 @@ export const make = (
 
 export interface Api {
   readonly httpClient: HttpClient.HttpClient
-  readonly "ChartsListCharts": <Config extends OperationConfig>(projectIdOrSlug: string, options: { readonly params?: typeof ChartsListChartsParams.Encoded | undefined; readonly config?: Config | undefined } | undefined) => Effect.Effect<WithOptionalResponse<typeof ChartsListCharts200.Type, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"ChartsListCharts400", typeof ChartsListCharts400.Type> | ApiError<"ChartsListCharts401", typeof ChartsListCharts401.Type> | ApiError<"ChartsListCharts403", typeof ChartsListCharts403.Type> | ApiError<"ChartsListCharts404", typeof ChartsListCharts404.Type>>
-  readonly "ChartsCreateChart": <Config extends OperationConfig>(projectIdOrSlug: string, options: { readonly payload: typeof ChartsCreateChartRequestJson.Encoded; readonly config?: Config | undefined }) => Effect.Effect<WithOptionalResponse<void, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"ChartsCreateChart400", typeof ChartsCreateChart400.Type> | ApiError<"ChartsCreateChart401", typeof ChartsCreateChart401.Type> | ApiError<"ChartsCreateChart403", typeof ChartsCreateChart403.Type> | ApiError<"ChartsCreateChart404", typeof ChartsCreateChart404.Type>>
-  readonly "ChartsDeleteChart": <Config extends OperationConfig>(projectIdOrSlug: string, id: string, options: { readonly config?: Config | undefined } | undefined) => Effect.Effect<WithOptionalResponse<void, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"ChartsDeleteChart400", typeof ChartsDeleteChart400.Type> | ApiError<"ChartsDeleteChart401", typeof ChartsDeleteChart401.Type> | ApiError<"ChartsDeleteChart403", typeof ChartsDeleteChart403.Type> | ApiError<"ChartsDeleteChart404", typeof ChartsDeleteChart404.Type>>
-  readonly "ChartsUpdateChart": <Config extends OperationConfig>(projectIdOrSlug: string, id: string, options: { readonly payload: typeof ChartsUpdateChartRequestJson.Encoded; readonly config?: Config | undefined }) => Effect.Effect<WithOptionalResponse<void, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"ChartsUpdateChart400", typeof ChartsUpdateChart400.Type> | ApiError<"ChartsUpdateChart401", typeof ChartsUpdateChart401.Type> | ApiError<"ChartsUpdateChart403", typeof ChartsUpdateChart403.Type> | ApiError<"ChartsUpdateChart404", typeof ChartsUpdateChart404.Type>>
-  readonly "DashboardsListDashboards": <Config extends OperationConfig>(projectIdOrSlug: string, options: { readonly config?: Config | undefined } | undefined) => Effect.Effect<WithOptionalResponse<typeof DashboardsListDashboards200.Type, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"DashboardsListDashboards400", typeof DashboardsListDashboards400.Type> | ApiError<"DashboardsListDashboards401", typeof DashboardsListDashboards401.Type> | ApiError<"DashboardsListDashboards403", typeof DashboardsListDashboards403.Type> | ApiError<"DashboardsListDashboards404", typeof DashboardsListDashboards404.Type>>
-  readonly "DashboardsCreateDashboard": <Config extends OperationConfig>(projectIdOrSlug: string, options: { readonly payload: typeof DashboardsCreateDashboardRequestJson.Encoded; readonly config?: Config | undefined }) => Effect.Effect<WithOptionalResponse<typeof DashboardsCreateDashboard200.Type, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"DashboardsCreateDashboard400", typeof DashboardsCreateDashboard400.Type> | ApiError<"DashboardsCreateDashboard401", typeof DashboardsCreateDashboard401.Type> | ApiError<"DashboardsCreateDashboard403", typeof DashboardsCreateDashboard403.Type> | ApiError<"DashboardsCreateDashboard404", typeof DashboardsCreateDashboard404.Type>>
-  readonly "DashboardsReorderDashboards": <Config extends OperationConfig>(projectIdOrSlug: string, options: { readonly payload: typeof DashboardsReorderDashboardsRequestJson.Encoded; readonly config?: Config | undefined }) => Effect.Effect<WithOptionalResponse<void, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"DashboardsReorderDashboards400", typeof DashboardsReorderDashboards400.Type> | ApiError<"DashboardsReorderDashboards401", typeof DashboardsReorderDashboards401.Type> | ApiError<"DashboardsReorderDashboards403", typeof DashboardsReorderDashboards403.Type> | ApiError<"DashboardsReorderDashboards404", typeof DashboardsReorderDashboards404.Type>>
-  readonly "DashboardsDuplicateDashboard": <Config extends OperationConfig>(projectIdOrSlug: string, id: string, options: { readonly config?: Config | undefined } | undefined) => Effect.Effect<WithOptionalResponse<typeof DashboardsDuplicateDashboard200.Type, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"DashboardsDuplicateDashboard400", typeof DashboardsDuplicateDashboard400.Type> | ApiError<"DashboardsDuplicateDashboard401", typeof DashboardsDuplicateDashboard401.Type> | ApiError<"DashboardsDuplicateDashboard403", typeof DashboardsDuplicateDashboard403.Type> | ApiError<"DashboardsDuplicateDashboard404", typeof DashboardsDuplicateDashboard404.Type>>
-  readonly "DashboardsCopyDashboard": <Config extends OperationConfig>(projectIdOrSlug: string, id: string, options: { readonly payload: typeof DashboardsCopyDashboardRequestJson.Encoded; readonly config?: Config | undefined }) => Effect.Effect<WithOptionalResponse<typeof DashboardsCopyDashboard200.Type, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"DashboardsCopyDashboard400", typeof DashboardsCopyDashboard400.Type> | ApiError<"DashboardsCopyDashboard401", typeof DashboardsCopyDashboard401.Type> | ApiError<"DashboardsCopyDashboard403", typeof DashboardsCopyDashboard403.Type> | ApiError<"DashboardsCopyDashboard404", typeof DashboardsCopyDashboard404.Type>>
-  readonly "DashboardsDeleteDashboard": <Config extends OperationConfig>(projectIdOrSlug: string, id: string, options: { readonly config?: Config | undefined } | undefined) => Effect.Effect<WithOptionalResponse<void, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"DashboardsDeleteDashboard400", typeof DashboardsDeleteDashboard400.Type> | ApiError<"DashboardsDeleteDashboard401", typeof DashboardsDeleteDashboard401.Type> | ApiError<"DashboardsDeleteDashboard403", typeof DashboardsDeleteDashboard403.Type> | ApiError<"DashboardsDeleteDashboard404", typeof DashboardsDeleteDashboard404.Type>>
-  readonly "DashboardsUpdateDashboard": <Config extends OperationConfig>(projectIdOrSlug: string, id: string, options: { readonly payload: typeof DashboardsUpdateDashboardRequestJson.Encoded; readonly config?: Config | undefined }) => Effect.Effect<WithOptionalResponse<typeof DashboardsUpdateDashboard200.Type, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"DashboardsUpdateDashboard400", typeof DashboardsUpdateDashboard400.Type> | ApiError<"DashboardsUpdateDashboard401", typeof DashboardsUpdateDashboard401.Type> | ApiError<"DashboardsUpdateDashboard403", typeof DashboardsUpdateDashboard403.Type> | ApiError<"DashboardsUpdateDashboard404", typeof DashboardsUpdateDashboard404.Type>>
-  readonly "DownloadsGetDownloadAnalytics": <Config extends OperationConfig>(projectIdOrSlug: string, options: { readonly params?: typeof DownloadsGetDownloadAnalyticsParams.Encoded | undefined; readonly config?: Config | undefined } | undefined) => Effect.Effect<WithOptionalResponse<typeof DownloadsGetDownloadAnalytics200.Type, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"DownloadsGetDownloadAnalytics401", typeof DownloadsGetDownloadAnalytics401.Type> | ApiError<"DownloadsGetDownloadAnalytics403", typeof DownloadsGetDownloadAnalytics403.Type> | ApiError<"DownloadsGetDownloadAnalytics404", typeof DownloadsGetDownloadAnalytics404.Type>>
-  readonly "EventExplorerGetEventExplorerRows": <Config extends OperationConfig>(projectIdOrSlug: string, options: { readonly params?: typeof EventExplorerGetEventExplorerRowsParams.Encoded | undefined; readonly config?: Config | undefined } | undefined) => Effect.Effect<WithOptionalResponse<typeof EventExplorerGetEventExplorerRows200.Type, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"EventExplorerGetEventExplorerRows401", typeof EventExplorerGetEventExplorerRows401.Type> | ApiError<"EventExplorerGetEventExplorerRows403", typeof EventExplorerGetEventExplorerRows403.Type> | ApiError<"EventExplorerGetEventExplorerRows404", typeof EventExplorerGetEventExplorerRows404.Type>>
-  readonly "FunnelsListFunnels": <Config extends OperationConfig>(projectIdOrSlug: string, options: { readonly config?: Config | undefined } | undefined) => Effect.Effect<WithOptionalResponse<typeof FunnelsListFunnels200.Type, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"FunnelsListFunnels400", typeof FunnelsListFunnels400.Type> | ApiError<"FunnelsListFunnels401", typeof FunnelsListFunnels401.Type> | ApiError<"FunnelsListFunnels403", typeof FunnelsListFunnels403.Type> | ApiError<"FunnelsListFunnels404", typeof FunnelsListFunnels404.Type>>
-  readonly "FunnelsCreateFunnel": <Config extends OperationConfig>(projectIdOrSlug: string, options: { readonly payload: typeof FunnelsCreateFunnelRequestJson.Encoded; readonly config?: Config | undefined }) => Effect.Effect<WithOptionalResponse<typeof FunnelsCreateFunnel200.Type, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"FunnelsCreateFunnel400", typeof FunnelsCreateFunnel400.Type> | ApiError<"FunnelsCreateFunnel401", typeof FunnelsCreateFunnel401.Type> | ApiError<"FunnelsCreateFunnel403", typeof FunnelsCreateFunnel403.Type> | ApiError<"FunnelsCreateFunnel404", typeof FunnelsCreateFunnel404.Type>>
-  readonly "FunnelsGetFunnel": <Config extends OperationConfig>(projectIdOrSlug: string, id: string, options: { readonly config?: Config | undefined } | undefined) => Effect.Effect<WithOptionalResponse<typeof FunnelsGetFunnel200.Type, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"FunnelsGetFunnel400", typeof FunnelsGetFunnel400.Type> | ApiError<"FunnelsGetFunnel401", typeof FunnelsGetFunnel401.Type> | ApiError<"FunnelsGetFunnel403", typeof FunnelsGetFunnel403.Type> | ApiError<"FunnelsGetFunnel404", typeof FunnelsGetFunnel404.Type>>
-  readonly "FunnelsDeleteFunnel": <Config extends OperationConfig>(projectIdOrSlug: string, id: string, options: { readonly config?: Config | undefined } | undefined) => Effect.Effect<WithOptionalResponse<void, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"FunnelsDeleteFunnel400", typeof FunnelsDeleteFunnel400.Type> | ApiError<"FunnelsDeleteFunnel401", typeof FunnelsDeleteFunnel401.Type> | ApiError<"FunnelsDeleteFunnel403", typeof FunnelsDeleteFunnel403.Type> | ApiError<"FunnelsDeleteFunnel404", typeof FunnelsDeleteFunnel404.Type>>
-  readonly "FunnelsUpdateFunnel": <Config extends OperationConfig>(projectIdOrSlug: string, id: string, options: { readonly payload: typeof FunnelsUpdateFunnelRequestJson.Encoded; readonly config?: Config | undefined }) => Effect.Effect<WithOptionalResponse<typeof FunnelsUpdateFunnel200.Type, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"FunnelsUpdateFunnel400", typeof FunnelsUpdateFunnel400.Type> | ApiError<"FunnelsUpdateFunnel401", typeof FunnelsUpdateFunnel401.Type> | ApiError<"FunnelsUpdateFunnel403", typeof FunnelsUpdateFunnel403.Type> | ApiError<"FunnelsUpdateFunnel404", typeof FunnelsUpdateFunnel404.Type>>
-  readonly "FunnelsDuplicateFunnel": <Config extends OperationConfig>(projectIdOrSlug: string, id: string, options: { readonly config?: Config | undefined } | undefined) => Effect.Effect<WithOptionalResponse<typeof FunnelsDuplicateFunnel200.Type, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"FunnelsDuplicateFunnel400", typeof FunnelsDuplicateFunnel400.Type> | ApiError<"FunnelsDuplicateFunnel401", typeof FunnelsDuplicateFunnel401.Type> | ApiError<"FunnelsDuplicateFunnel403", typeof FunnelsDuplicateFunnel403.Type> | ApiError<"FunnelsDuplicateFunnel404", typeof FunnelsDuplicateFunnel404.Type>>
+  readonly "ChartsListCharts": <Config extends OperationConfig>(idOrSlug: string, options: { readonly params?: typeof ChartsListChartsParams.Encoded | undefined; readonly config?: Config | undefined } | undefined) => Effect.Effect<WithOptionalResponse<typeof ChartsListCharts200.Type, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"ChartsListCharts400", typeof ChartsListCharts400.Type> | ApiError<"ChartsListCharts401", typeof ChartsListCharts401.Type> | ApiError<"ChartsListCharts403", typeof ChartsListCharts403.Type> | ApiError<"ChartsListCharts404", typeof ChartsListCharts404.Type>>
+  readonly "ChartsCreateChart": <Config extends OperationConfig>(idOrSlug: string, options: { readonly payload: typeof ChartsCreateChartRequestJson.Encoded; readonly config?: Config | undefined }) => Effect.Effect<WithOptionalResponse<void, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"ChartsCreateChart400", typeof ChartsCreateChart400.Type> | ApiError<"ChartsCreateChart401", typeof ChartsCreateChart401.Type> | ApiError<"ChartsCreateChart403", typeof ChartsCreateChart403.Type> | ApiError<"ChartsCreateChart404", typeof ChartsCreateChart404.Type>>
+  readonly "ChartsDeleteChart": <Config extends OperationConfig>(idOrSlug: string, id: string, options: { readonly config?: Config | undefined } | undefined) => Effect.Effect<WithOptionalResponse<void, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"ChartsDeleteChart400", typeof ChartsDeleteChart400.Type> | ApiError<"ChartsDeleteChart401", typeof ChartsDeleteChart401.Type> | ApiError<"ChartsDeleteChart403", typeof ChartsDeleteChart403.Type> | ApiError<"ChartsDeleteChart404", typeof ChartsDeleteChart404.Type>>
+  readonly "ChartsUpdateChart": <Config extends OperationConfig>(idOrSlug: string, id: string, options: { readonly payload: typeof ChartsUpdateChartRequestJson.Encoded; readonly config?: Config | undefined }) => Effect.Effect<WithOptionalResponse<void, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"ChartsUpdateChart400", typeof ChartsUpdateChart400.Type> | ApiError<"ChartsUpdateChart401", typeof ChartsUpdateChart401.Type> | ApiError<"ChartsUpdateChart403", typeof ChartsUpdateChart403.Type> | ApiError<"ChartsUpdateChart404", typeof ChartsUpdateChart404.Type>>
+  readonly "DashboardsListDashboards": <Config extends OperationConfig>(idOrSlug: string, options: { readonly config?: Config | undefined } | undefined) => Effect.Effect<WithOptionalResponse<typeof DashboardsListDashboards200.Type, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"DashboardsListDashboards400", typeof DashboardsListDashboards400.Type> | ApiError<"DashboardsListDashboards401", typeof DashboardsListDashboards401.Type> | ApiError<"DashboardsListDashboards403", typeof DashboardsListDashboards403.Type> | ApiError<"DashboardsListDashboards404", typeof DashboardsListDashboards404.Type>>
+  readonly "DashboardsCreateDashboard": <Config extends OperationConfig>(idOrSlug: string, options: { readonly payload: typeof DashboardsCreateDashboardRequestJson.Encoded; readonly config?: Config | undefined }) => Effect.Effect<WithOptionalResponse<typeof DashboardsCreateDashboard200.Type, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"DashboardsCreateDashboard400", typeof DashboardsCreateDashboard400.Type> | ApiError<"DashboardsCreateDashboard401", typeof DashboardsCreateDashboard401.Type> | ApiError<"DashboardsCreateDashboard403", typeof DashboardsCreateDashboard403.Type> | ApiError<"DashboardsCreateDashboard404", typeof DashboardsCreateDashboard404.Type>>
+  readonly "DashboardsReorderDashboards": <Config extends OperationConfig>(idOrSlug: string, options: { readonly payload: typeof DashboardsReorderDashboardsRequestJson.Encoded; readonly config?: Config | undefined }) => Effect.Effect<WithOptionalResponse<void, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"DashboardsReorderDashboards400", typeof DashboardsReorderDashboards400.Type> | ApiError<"DashboardsReorderDashboards401", typeof DashboardsReorderDashboards401.Type> | ApiError<"DashboardsReorderDashboards403", typeof DashboardsReorderDashboards403.Type> | ApiError<"DashboardsReorderDashboards404", typeof DashboardsReorderDashboards404.Type>>
+  readonly "DashboardsDuplicateDashboard": <Config extends OperationConfig>(idOrSlug: string, id: string, options: { readonly config?: Config | undefined } | undefined) => Effect.Effect<WithOptionalResponse<typeof DashboardsDuplicateDashboard200.Type, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"DashboardsDuplicateDashboard400", typeof DashboardsDuplicateDashboard400.Type> | ApiError<"DashboardsDuplicateDashboard401", typeof DashboardsDuplicateDashboard401.Type> | ApiError<"DashboardsDuplicateDashboard403", typeof DashboardsDuplicateDashboard403.Type> | ApiError<"DashboardsDuplicateDashboard404", typeof DashboardsDuplicateDashboard404.Type>>
+  readonly "DashboardsCopyDashboard": <Config extends OperationConfig>(idOrSlug: string, id: string, options: { readonly payload: typeof DashboardsCopyDashboardRequestJson.Encoded; readonly config?: Config | undefined }) => Effect.Effect<WithOptionalResponse<typeof DashboardsCopyDashboard200.Type, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"DashboardsCopyDashboard400", typeof DashboardsCopyDashboard400.Type> | ApiError<"DashboardsCopyDashboard401", typeof DashboardsCopyDashboard401.Type> | ApiError<"DashboardsCopyDashboard403", typeof DashboardsCopyDashboard403.Type> | ApiError<"DashboardsCopyDashboard404", typeof DashboardsCopyDashboard404.Type>>
+  readonly "DashboardsDeleteDashboard": <Config extends OperationConfig>(idOrSlug: string, id: string, options: { readonly config?: Config | undefined } | undefined) => Effect.Effect<WithOptionalResponse<void, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"DashboardsDeleteDashboard400", typeof DashboardsDeleteDashboard400.Type> | ApiError<"DashboardsDeleteDashboard401", typeof DashboardsDeleteDashboard401.Type> | ApiError<"DashboardsDeleteDashboard403", typeof DashboardsDeleteDashboard403.Type> | ApiError<"DashboardsDeleteDashboard404", typeof DashboardsDeleteDashboard404.Type>>
+  readonly "DashboardsUpdateDashboard": <Config extends OperationConfig>(idOrSlug: string, id: string, options: { readonly payload: typeof DashboardsUpdateDashboardRequestJson.Encoded; readonly config?: Config | undefined }) => Effect.Effect<WithOptionalResponse<typeof DashboardsUpdateDashboard200.Type, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"DashboardsUpdateDashboard400", typeof DashboardsUpdateDashboard400.Type> | ApiError<"DashboardsUpdateDashboard401", typeof DashboardsUpdateDashboard401.Type> | ApiError<"DashboardsUpdateDashboard403", typeof DashboardsUpdateDashboard403.Type> | ApiError<"DashboardsUpdateDashboard404", typeof DashboardsUpdateDashboard404.Type>>
+  readonly "DownloadsGetDownloadAnalytics": <Config extends OperationConfig>(idOrSlug: string, options: { readonly params?: typeof DownloadsGetDownloadAnalyticsParams.Encoded | undefined; readonly config?: Config | undefined } | undefined) => Effect.Effect<WithOptionalResponse<typeof DownloadsGetDownloadAnalytics200.Type, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"DownloadsGetDownloadAnalytics401", typeof DownloadsGetDownloadAnalytics401.Type> | ApiError<"DownloadsGetDownloadAnalytics403", typeof DownloadsGetDownloadAnalytics403.Type> | ApiError<"DownloadsGetDownloadAnalytics404", typeof DownloadsGetDownloadAnalytics404.Type>>
+  readonly "EventExplorerGetEventExplorerRows": <Config extends OperationConfig>(idOrSlug: string, options: { readonly params?: typeof EventExplorerGetEventExplorerRowsParams.Encoded | undefined; readonly config?: Config | undefined } | undefined) => Effect.Effect<WithOptionalResponse<typeof EventExplorerGetEventExplorerRows200.Type, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"EventExplorerGetEventExplorerRows401", typeof EventExplorerGetEventExplorerRows401.Type> | ApiError<"EventExplorerGetEventExplorerRows403", typeof EventExplorerGetEventExplorerRows403.Type> | ApiError<"EventExplorerGetEventExplorerRows404", typeof EventExplorerGetEventExplorerRows404.Type>>
+  readonly "FunnelsListFunnels": <Config extends OperationConfig>(idOrSlug: string, options: { readonly config?: Config | undefined } | undefined) => Effect.Effect<WithOptionalResponse<typeof FunnelsListFunnels200.Type, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"FunnelsListFunnels400", typeof FunnelsListFunnels400.Type> | ApiError<"FunnelsListFunnels401", typeof FunnelsListFunnels401.Type> | ApiError<"FunnelsListFunnels403", typeof FunnelsListFunnels403.Type> | ApiError<"FunnelsListFunnels404", typeof FunnelsListFunnels404.Type>>
+  readonly "FunnelsCreateFunnel": <Config extends OperationConfig>(idOrSlug: string, options: { readonly payload: typeof FunnelsCreateFunnelRequestJson.Encoded; readonly config?: Config | undefined }) => Effect.Effect<WithOptionalResponse<typeof FunnelsCreateFunnel200.Type, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"FunnelsCreateFunnel400", typeof FunnelsCreateFunnel400.Type> | ApiError<"FunnelsCreateFunnel401", typeof FunnelsCreateFunnel401.Type> | ApiError<"FunnelsCreateFunnel403", typeof FunnelsCreateFunnel403.Type> | ApiError<"FunnelsCreateFunnel404", typeof FunnelsCreateFunnel404.Type>>
+  readonly "FunnelsGetFunnel": <Config extends OperationConfig>(idOrSlug: string, id: string, options: { readonly config?: Config | undefined } | undefined) => Effect.Effect<WithOptionalResponse<typeof FunnelsGetFunnel200.Type, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"FunnelsGetFunnel400", typeof FunnelsGetFunnel400.Type> | ApiError<"FunnelsGetFunnel401", typeof FunnelsGetFunnel401.Type> | ApiError<"FunnelsGetFunnel403", typeof FunnelsGetFunnel403.Type> | ApiError<"FunnelsGetFunnel404", typeof FunnelsGetFunnel404.Type>>
+  readonly "FunnelsDeleteFunnel": <Config extends OperationConfig>(idOrSlug: string, id: string, options: { readonly config?: Config | undefined } | undefined) => Effect.Effect<WithOptionalResponse<void, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"FunnelsDeleteFunnel400", typeof FunnelsDeleteFunnel400.Type> | ApiError<"FunnelsDeleteFunnel401", typeof FunnelsDeleteFunnel401.Type> | ApiError<"FunnelsDeleteFunnel403", typeof FunnelsDeleteFunnel403.Type> | ApiError<"FunnelsDeleteFunnel404", typeof FunnelsDeleteFunnel404.Type>>
+  readonly "FunnelsUpdateFunnel": <Config extends OperationConfig>(idOrSlug: string, id: string, options: { readonly payload: typeof FunnelsUpdateFunnelRequestJson.Encoded; readonly config?: Config | undefined }) => Effect.Effect<WithOptionalResponse<typeof FunnelsUpdateFunnel200.Type, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"FunnelsUpdateFunnel400", typeof FunnelsUpdateFunnel400.Type> | ApiError<"FunnelsUpdateFunnel401", typeof FunnelsUpdateFunnel401.Type> | ApiError<"FunnelsUpdateFunnel403", typeof FunnelsUpdateFunnel403.Type> | ApiError<"FunnelsUpdateFunnel404", typeof FunnelsUpdateFunnel404.Type>>
+  readonly "FunnelsDuplicateFunnel": <Config extends OperationConfig>(idOrSlug: string, id: string, options: { readonly config?: Config | undefined } | undefined) => Effect.Effect<WithOptionalResponse<typeof FunnelsDuplicateFunnel200.Type, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"FunnelsDuplicateFunnel400", typeof FunnelsDuplicateFunnel400.Type> | ApiError<"FunnelsDuplicateFunnel401", typeof FunnelsDuplicateFunnel401.Type> | ApiError<"FunnelsDuplicateFunnel403", typeof FunnelsDuplicateFunnel403.Type> | ApiError<"FunnelsDuplicateFunnel404", typeof FunnelsDuplicateFunnel404.Type>>
+  readonly "NetworkRulesListNetworkRules": <Config extends OperationConfig>(idOrSlug: string, options: { readonly config?: Config | undefined } | undefined) => Effect.Effect<WithOptionalResponse<typeof NetworkRulesListNetworkRules200.Type, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"NetworkRulesListNetworkRules400", typeof NetworkRulesListNetworkRules400.Type> | ApiError<"NetworkRulesListNetworkRules401", typeof NetworkRulesListNetworkRules401.Type> | ApiError<"NetworkRulesListNetworkRules403", typeof NetworkRulesListNetworkRules403.Type> | ApiError<"NetworkRulesListNetworkRules404", typeof NetworkRulesListNetworkRules404.Type>>
+  readonly "NetworkRulesCreateNetworkRule": <Config extends OperationConfig>(idOrSlug: string, options: { readonly payload: typeof NetworkRulesCreateNetworkRuleRequestJson.Encoded; readonly config?: Config | undefined }) => Effect.Effect<WithOptionalResponse<typeof NetworkRulesCreateNetworkRule200.Type, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"NetworkRulesCreateNetworkRule400", typeof NetworkRulesCreateNetworkRule400.Type> | ApiError<"NetworkRulesCreateNetworkRule401", typeof NetworkRulesCreateNetworkRule401.Type> | ApiError<"NetworkRulesCreateNetworkRule403", typeof NetworkRulesCreateNetworkRule403.Type> | ApiError<"NetworkRulesCreateNetworkRule404", typeof NetworkRulesCreateNetworkRule404.Type>>
+  readonly "NetworkRulesDeleteNetworkRule": <Config extends OperationConfig>(idOrSlug: string, id: string, options: { readonly config?: Config | undefined } | undefined) => Effect.Effect<WithOptionalResponse<void, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"NetworkRulesDeleteNetworkRule400", typeof NetworkRulesDeleteNetworkRule400.Type> | ApiError<"NetworkRulesDeleteNetworkRule401", typeof NetworkRulesDeleteNetworkRule401.Type> | ApiError<"NetworkRulesDeleteNetworkRule403", typeof NetworkRulesDeleteNetworkRule403.Type> | ApiError<"NetworkRulesDeleteNetworkRule404", typeof NetworkRulesDeleteNetworkRule404.Type>>
   readonly "ProjectsListProjects": <Config extends OperationConfig>(options: { readonly params?: typeof ProjectsListProjectsParams.Encoded | undefined; readonly config?: Config | undefined } | undefined) => Effect.Effect<WithOptionalResponse<typeof ProjectsListProjects200.Type, Config>, HttpClientError.HttpClientError | SchemaError>
   readonly "ProjectsListPublicProjects": <Config extends OperationConfig>(options: { readonly params?: typeof ProjectsListPublicProjectsParams.Encoded | undefined; readonly config?: Config | undefined } | undefined) => Effect.Effect<WithOptionalResponse<typeof ProjectsListPublicProjects200.Type, Config>, HttpClientError.HttpClientError | SchemaError>
   readonly "ProjectsGetProject": <Config extends OperationConfig>(idOrSlug: string, options: { readonly config?: Config | undefined } | undefined) => Effect.Effect<WithOptionalResponse<typeof ProjectsGetProject200.Type, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"ProjectsGetProject400", typeof ProjectsGetProject400.Type> | ApiError<"ProjectsGetProject401", typeof ProjectsGetProject401.Type> | ApiError<"ProjectsGetProject403", typeof ProjectsGetProject403.Type> | ApiError<"ProjectsGetProject404", typeof ProjectsGetProject404.Type> | ApiError<"ProjectsGetProject409", typeof ProjectsGetProject409.Type>>
@@ -863,12 +931,12 @@ export interface Api {
   readonly "ProjectsCheckSlugAvailability": <Config extends OperationConfig>(options: { readonly params: typeof ProjectsCheckSlugAvailabilityParams.Encoded; readonly config?: Config | undefined }) => Effect.Effect<WithOptionalResponse<typeof ProjectsCheckSlugAvailability200.Type, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"ProjectsCheckSlugAvailability400", typeof ProjectsCheckSlugAvailability400.Type> | ApiError<"ProjectsCheckSlugAvailability401", typeof ProjectsCheckSlugAvailability401.Type> | ApiError<"ProjectsCheckSlugAvailability403", typeof ProjectsCheckSlugAvailability403.Type> | ApiError<"ProjectsCheckSlugAvailability404", typeof ProjectsCheckSlugAvailability404.Type> | ApiError<"ProjectsCheckSlugAvailability409", typeof ProjectsCheckSlugAvailability409.Type>>
   readonly "ProjectsMoveProject": <Config extends OperationConfig>(id: string, options: { readonly payload: typeof ProjectsMoveProjectRequestJson.Encoded; readonly config?: Config | undefined }) => Effect.Effect<WithOptionalResponse<void, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"ProjectsMoveProject400", typeof ProjectsMoveProject400.Type> | ApiError<"ProjectsMoveProject401", typeof ProjectsMoveProject401.Type> | ApiError<"ProjectsMoveProject403", typeof ProjectsMoveProject403.Type> | ApiError<"ProjectsMoveProject404", typeof ProjectsMoveProject404.Type> | ApiError<"ProjectsMoveProject409", typeof ProjectsMoveProject409.Type>>
   readonly "ProjectsWipeProjectData": <Config extends OperationConfig>(id: string, options: { readonly payload: typeof ProjectsWipeProjectDataRequestJson.Encoded; readonly config?: Config | undefined }) => Effect.Effect<WithOptionalResponse<void, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"ProjectsWipeProjectData400", typeof ProjectsWipeProjectData400.Type> | ApiError<"ProjectsWipeProjectData401", typeof ProjectsWipeProjectData401.Type> | ApiError<"ProjectsWipeProjectData403", typeof ProjectsWipeProjectData403.Type> | ApiError<"ProjectsWipeProjectData404", typeof ProjectsWipeProjectData404.Type> | ApiError<"ProjectsWipeProjectData409", typeof ProjectsWipeProjectData409.Type>>
-  readonly "RetentionGetRetentionForProject": <Config extends OperationConfig>(projectIdOrSlug: string, options: { readonly params: typeof RetentionGetRetentionForProjectParams.Encoded; readonly config?: Config | undefined }) => Effect.Effect<WithOptionalResponse<typeof RetentionGetRetentionForProject200.Type, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"RetentionGetRetentionForProject401", typeof RetentionGetRetentionForProject401.Type> | ApiError<"RetentionGetRetentionForProject403", typeof RetentionGetRetentionForProject403.Type> | ApiError<"RetentionGetRetentionForProject404", typeof RetentionGetRetentionForProject404.Type>>
-  readonly "RetentionGetRetentionDriversForProject": <Config extends OperationConfig>(projectIdOrSlug: string, options: { readonly params: typeof RetentionGetRetentionDriversForProjectParams.Encoded; readonly config?: Config | undefined }) => Effect.Effect<WithOptionalResponse<typeof RetentionGetRetentionDriversForProject200.Type, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"RetentionGetRetentionDriversForProject401", typeof RetentionGetRetentionDriversForProject401.Type> | ApiError<"RetentionGetRetentionDriversForProject403", typeof RetentionGetRetentionDriversForProject403.Type> | ApiError<"RetentionGetRetentionDriversForProject404", typeof RetentionGetRetentionDriversForProject404.Type>>
+  readonly "RetentionGetRetentionForProject": <Config extends OperationConfig>(idOrSlug: string, options: { readonly params: typeof RetentionGetRetentionForProjectParams.Encoded; readonly config?: Config | undefined }) => Effect.Effect<WithOptionalResponse<typeof RetentionGetRetentionForProject200.Type, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"RetentionGetRetentionForProject401", typeof RetentionGetRetentionForProject401.Type> | ApiError<"RetentionGetRetentionForProject403", typeof RetentionGetRetentionForProject403.Type> | ApiError<"RetentionGetRetentionForProject404", typeof RetentionGetRetentionForProject404.Type>>
+  readonly "RetentionGetRetentionDriversForProject": <Config extends OperationConfig>(idOrSlug: string, options: { readonly params: typeof RetentionGetRetentionDriversForProjectParams.Encoded; readonly config?: Config | undefined }) => Effect.Effect<WithOptionalResponse<typeof RetentionGetRetentionDriversForProject200.Type, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"RetentionGetRetentionDriversForProject401", typeof RetentionGetRetentionDriversForProject401.Type> | ApiError<"RetentionGetRetentionDriversForProject403", typeof RetentionGetRetentionDriversForProject403.Type> | ApiError<"RetentionGetRetentionDriversForProject404", typeof RetentionGetRetentionDriversForProject404.Type>>
   readonly "SpotlightGetSpotlightProjects": <Config extends OperationConfig>(options: { readonly config?: Config | undefined } | undefined) => Effect.Effect<WithOptionalResponse<typeof SpotlightGetSpotlightProjects200.Type, Config>, HttpClientError.HttpClientError | SchemaError>
-  readonly "WebVitalsGetWebVitalsForProject": <Config extends OperationConfig>(projectIdOrSlug: string, options: { readonly params?: typeof WebVitalsGetWebVitalsForProjectParams.Encoded | undefined; readonly config?: Config | undefined } | undefined) => Effect.Effect<WithOptionalResponse<typeof WebVitalsGetWebVitalsForProject200.Type, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"WebVitalsGetWebVitalsForProject401", typeof WebVitalsGetWebVitalsForProject401.Type> | ApiError<"WebVitalsGetWebVitalsForProject403", typeof WebVitalsGetWebVitalsForProject403.Type> | ApiError<"WebVitalsGetWebVitalsForProject404", typeof WebVitalsGetWebVitalsForProject404.Type>>
-  readonly "WebVitalsGetBuildDeploymentsForProject": <Config extends OperationConfig>(projectIdOrSlug: string, options: { readonly params?: typeof WebVitalsGetBuildDeploymentsForProjectParams.Encoded | undefined; readonly config?: Config | undefined } | undefined) => Effect.Effect<WithOptionalResponse<typeof WebVitalsGetBuildDeploymentsForProject200.Type, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"WebVitalsGetBuildDeploymentsForProject401", typeof WebVitalsGetBuildDeploymentsForProject401.Type> | ApiError<"WebVitalsGetBuildDeploymentsForProject403", typeof WebVitalsGetBuildDeploymentsForProject403.Type> | ApiError<"WebVitalsGetBuildDeploymentsForProject404", typeof WebVitalsGetBuildDeploymentsForProject404.Type>>
-  readonly "WebVitalsGetWebVitalsTrends": <Config extends OperationConfig>(projectIdOrSlug: string, options: { readonly params?: typeof WebVitalsGetWebVitalsTrendsParams.Encoded | undefined; readonly config?: Config | undefined } | undefined) => Effect.Effect<WithOptionalResponse<typeof WebVitalsGetWebVitalsTrends200.Type, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"WebVitalsGetWebVitalsTrends401", typeof WebVitalsGetWebVitalsTrends401.Type> | ApiError<"WebVitalsGetWebVitalsTrends403", typeof WebVitalsGetWebVitalsTrends403.Type> | ApiError<"WebVitalsGetWebVitalsTrends404", typeof WebVitalsGetWebVitalsTrends404.Type>>
+  readonly "WebVitalsGetWebVitalsForProject": <Config extends OperationConfig>(idOrSlug: string, options: { readonly params?: typeof WebVitalsGetWebVitalsForProjectParams.Encoded | undefined; readonly config?: Config | undefined } | undefined) => Effect.Effect<WithOptionalResponse<typeof WebVitalsGetWebVitalsForProject200.Type, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"WebVitalsGetWebVitalsForProject401", typeof WebVitalsGetWebVitalsForProject401.Type> | ApiError<"WebVitalsGetWebVitalsForProject403", typeof WebVitalsGetWebVitalsForProject403.Type> | ApiError<"WebVitalsGetWebVitalsForProject404", typeof WebVitalsGetWebVitalsForProject404.Type>>
+  readonly "WebVitalsGetBuildDeploymentsForProject": <Config extends OperationConfig>(idOrSlug: string, options: { readonly params?: typeof WebVitalsGetBuildDeploymentsForProjectParams.Encoded | undefined; readonly config?: Config | undefined } | undefined) => Effect.Effect<WithOptionalResponse<typeof WebVitalsGetBuildDeploymentsForProject200.Type, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"WebVitalsGetBuildDeploymentsForProject401", typeof WebVitalsGetBuildDeploymentsForProject401.Type> | ApiError<"WebVitalsGetBuildDeploymentsForProject403", typeof WebVitalsGetBuildDeploymentsForProject403.Type> | ApiError<"WebVitalsGetBuildDeploymentsForProject404", typeof WebVitalsGetBuildDeploymentsForProject404.Type>>
+  readonly "WebVitalsGetWebVitalsTrends": <Config extends OperationConfig>(idOrSlug: string, options: { readonly params?: typeof WebVitalsGetWebVitalsTrendsParams.Encoded | undefined; readonly config?: Config | undefined } | undefined) => Effect.Effect<WithOptionalResponse<typeof WebVitalsGetWebVitalsTrends200.Type, Config>, HttpClientError.HttpClientError | SchemaError | ApiError<"WebVitalsGetWebVitalsTrends401", typeof WebVitalsGetWebVitalsTrends401.Type> | ApiError<"WebVitalsGetWebVitalsTrends403", typeof WebVitalsGetWebVitalsTrends403.Type> | ApiError<"WebVitalsGetWebVitalsTrends404", typeof WebVitalsGetWebVitalsTrends404.Type>>
 }
 
 export interface ApiError<Tag extends string, E> {
