@@ -1,0 +1,265 @@
+const HEX_COLOR_RE = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
+
+const SINGLE_COLOR_HUE_OFFSETS = [0, 18, -14, 34, -28, 52, -42, 70, -56, 86];
+const SINGLE_COLOR_LIGHTNESS_OFFSETS = [
+	0, 8, -8, 14, -14, 18, -18, 24, -24, 28,
+];
+const SINGLE_COLOR_SATURATION_OFFSETS = [
+	0, 6, -6, 10, -10, 12, -12, 14, -14, 16,
+];
+
+export const DEFAULT_CHART_COLORS = [
+	"#FDBA74",
+	"#F97316",
+	"#EA580C",
+	"#C2410C",
+	"#9A3412",
+];
+
+export const CHART_COLOR_PRESETS = [
+	{
+		label: "Amber Pulse",
+		colors: ["#FDBA74", "#F97316", "#EA580C", "#C2410C", "#9A3412"],
+	},
+	{
+		label: "Ocean Data",
+		colors: ["#2563EB", "#06B6D4", "#0EA5E9", "#38BDF8", "#7DD3FC"],
+	},
+	{
+		label: "Forest Signal",
+		colors: ["#15803D", "#22C55E", "#84CC16", "#4ADE80", "#BEF264"],
+	},
+	{
+		label: "Berry Contrast",
+		colors: ["#7C3AED", "#EC4899", "#F43F5E", "#A78BFA", "#FDA4AF"],
+	},
+	{
+		label: "Slate Mono",
+		colors: ["#1E293B", "#334155", "#475569", "#64748B", "#94A3B8"],
+	},
+	{
+		label: "Sunset Drift",
+		colors: ["#DC2626", "#EA580C", "#F59E0B", "#FBBF24", "#FDE68A"],
+	},
+	{
+		label: "Neon Mint",
+		colors: ["#059669", "#10B981", "#34D399", "#6EE7B7", "#A7F3D0"],
+	},
+	{
+		label: "Electric Indigo",
+		colors: ["#4338CA", "#6366F1", "#818CF8", "#A5B4FC", "#C7D2FE"],
+	},
+	{
+		label: "Rose Quartz",
+		colors: ["#BE123C", "#E11D48", "#FB7185", "#FDA4AF", "#FFE4E6"],
+	},
+	{
+		label: "Copper Flame",
+		colors: ["#92400E", "#B45309", "#D97706", "#F59E0B", "#FCD34D"],
+	},
+	{
+		label: "Arctic Teal",
+		colors: ["#115E59", "#0D9488", "#14B8A6", "#5EEAD4", "#99F6E4"],
+	},
+	{
+		label: "Warm Neutral",
+		colors: ["#44403C", "#78716C", "#A8A29E", "#D6D3D1", "#E7E5E4"],
+	},
+] as const;
+
+function clamp(value: number, min: number, max: number) {
+	return Math.min(max, Math.max(min, value));
+}
+
+function normalizeHexColor(value: string): string | null {
+	const color = value.trim();
+	if (!HEX_COLOR_RE.test(color)) return null;
+
+	if (color.length === 4) {
+		const [r, g, b] = color.slice(1);
+		return `#${r}${r}${g}${g}${b}${b}`.toUpperCase();
+	}
+
+	return color.toUpperCase();
+}
+
+export function normalizeChartColor(value: string): string | null {
+	return normalizeHexColor(value);
+}
+
+function hexToHsl(hex: string): { h: number; s: number; l: number } {
+	const c = hex.slice(1);
+	const r = Number.parseInt(c.slice(0, 2), 16) / 255;
+	const g = Number.parseInt(c.slice(2, 4), 16) / 255;
+	const b = Number.parseInt(c.slice(4, 6), 16) / 255;
+
+	const max = Math.max(r, g, b);
+	const min = Math.min(r, g, b);
+	const delta = max - min;
+
+	let h = 0;
+	const l = (max + min) / 2;
+
+	if (delta !== 0) {
+		switch (max) {
+			case r:
+				h = ((g - b) / delta) % 6;
+				break;
+			case g:
+				h = (b - r) / delta + 2;
+				break;
+			default:
+				h = (r - g) / delta + 4;
+				break;
+		}
+	}
+
+	h *= 60;
+	if (h < 0) h += 360;
+
+	const s = delta === 0 ? 0 : delta / (1 - Math.abs(2 * l - 1));
+
+	return {
+		h,
+		s: s * 100,
+		l: l * 100,
+	};
+}
+
+function hslToHex(h: number, s: number, l: number): string {
+	const sat = clamp(s, 0, 100) / 100;
+	const lig = clamp(l, 0, 100) / 100;
+	const c = (1 - Math.abs(2 * lig - 1)) * sat;
+	const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+	const m = lig - c / 2;
+
+	let r = 0;
+	let g = 0;
+	let b = 0;
+
+	if (h < 60) {
+		r = c;
+		g = x;
+	} else if (h < 120) {
+		r = x;
+		g = c;
+	} else if (h < 180) {
+		g = c;
+		b = x;
+	} else if (h < 240) {
+		g = x;
+		b = c;
+	} else if (h < 300) {
+		r = x;
+		b = c;
+	} else {
+		r = c;
+		b = x;
+	}
+
+	const toHex = (value: number) =>
+		Math.round((value + m) * 255)
+			.toString(16)
+			.padStart(2, "0")
+			.toUpperCase();
+
+	return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+
+function generateFromSingleColor(baseColor: string, index: number): string {
+	const base = hexToHsl(baseColor);
+	const offsetIndex = index % SINGLE_COLOR_HUE_OFFSETS.length;
+	const cycle = Math.floor(index / SINGLE_COLOR_HUE_OFFSETS.length);
+
+	const h =
+		(base.h + (SINGLE_COLOR_HUE_OFFSETS[offsetIndex] ?? 0) + cycle * 20 + 360) %
+		360;
+	const s = clamp(
+		base.s + (SINGLE_COLOR_SATURATION_OFFSETS[offsetIndex] ?? 0) - cycle * 3,
+		35,
+		92,
+	);
+	const l = clamp(
+		base.l + (SINGLE_COLOR_LIGHTNESS_OFFSETS[offsetIndex] ?? 0) + cycle * 5,
+		28,
+		78,
+	);
+
+	return hslToHex(h, s, l);
+}
+
+function sanitizeInputColors(colors: readonly string[] | undefined): string[] {
+	if (!colors?.length) return [];
+
+	const unique = new Set<string>();
+	for (const color of colors) {
+		const normalized = normalizeHexColor(color);
+		if (normalized) unique.add(normalized);
+	}
+	return Array.from(unique);
+}
+
+export function buildChartPalette(
+	inputColors: readonly string[] | undefined,
+	count: number,
+	fallbackColors: readonly string[] = DEFAULT_CHART_COLORS,
+): string[] {
+	const safeCount = Math.max(1, count);
+	const baseColors = sanitizeInputColors(inputColors);
+	const fallback = sanitizeInputColors(fallbackColors);
+	const seed = baseColors.length > 0 ? baseColors : fallback;
+
+	if (seed.length === 0) return [DEFAULT_CHART_COLORS[0]!];
+	if (seed.length >= safeCount) return seed.slice(0, safeCount);
+
+	const result = [...seed];
+	while (result.length < safeCount) {
+		if (seed.length === 1) {
+			result.push(generateFromSingleColor(seed[0]!, result.length));
+			continue;
+		}
+
+		const anchor = seed[result.length % seed.length]!;
+		const bump = Math.floor(result.length / seed.length);
+		const { h, s, l } = hexToHsl(anchor);
+		result.push(
+			hslToHex(
+				(h + (bump % 2 === 0 ? 14 : -14) + 360) % 360,
+				clamp(s + (bump % 2 === 0 ? 4 : -4), 35, 92),
+				clamp(l + (bump % 2 === 0 ? 6 : -6), 28, 78),
+			),
+		);
+	}
+
+	return result;
+}
+
+export function getChartColor(palette: string[], index: number): string {
+	if (!palette.length) return DEFAULT_CHART_COLORS[0]!;
+	return palette[index % palette.length]!;
+}
+
+export function sanitizeChartColors(
+	colors: readonly string[] | undefined,
+): string[] {
+	if (!colors?.length) return [DEFAULT_CHART_COLORS[0]!];
+
+	const sanitized: string[] = [];
+	for (const color of colors) {
+		const normalized = normalizeHexColor(color);
+		if (normalized) sanitized.push(normalized);
+	}
+
+	return sanitized.length > 0 ? sanitized : [DEFAULT_CHART_COLORS[0]!];
+}
+
+export function resolveChartPalette(
+	chartColors: readonly string[] | null | undefined,
+	preferredChartColors: readonly string[] | null | undefined,
+	count = 2,
+): string[] {
+	return buildChartPalette(
+		chartColors ?? preferredChartColors ?? undefined,
+		count,
+	);
+}

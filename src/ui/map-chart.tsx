@@ -13,7 +13,7 @@ const BRAILLE_DOT_BITS: ReadonlyArray<ReadonlyArray<number>> = [
 ];
 
 export interface MapChartHighlight {
-	/** Country numeric ISO code (e.g. `"840"`) or country name. */
+	/** ISO alpha-2/alpha-3, numeric ISO code (e.g. `"840"`), or country name. */
 	readonly country: string;
 	/** Hex color to fill the country with. */
 	readonly color: string;
@@ -57,7 +57,17 @@ export function MapChart(props: MapChartProps) {
 		const w = charWidth();
 		const h = charHeight();
 		const highlights = highlightMap();
-		if (!parent) return;
+		if (!parent || w <= 0 || h <= 0) return;
+
+		const sizeChanged =
+			frameBuffer !== undefined &&
+			(frameBuffer.width !== w || frameBuffer.height !== h);
+
+		if (frameBuffer && sizeChanged) {
+			parent.remove(frameBuffer.id);
+			frameBuffer.destroy();
+			frameBuffer = undefined;
+		}
 
 		if (!frameBuffer) {
 			frameBuffer = new FrameBufferRenderable(renderer, {
@@ -65,12 +75,10 @@ export function MapChart(props: MapChartProps) {
 				height: h,
 			});
 			parent.add(frameBuffer);
-		} else if (frameBuffer.width !== w || frameBuffer.height !== h) {
-			frameBuffer.width = w;
-			frameBuffer.height = h;
 		}
 
 		drawWorldMap(frameBuffer, w, h, oceanColor, landColor, highlights);
+		frameBuffer.requestRender();
 	});
 
 	onCleanup(() => {

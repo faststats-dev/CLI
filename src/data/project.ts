@@ -13,6 +13,7 @@ export interface Project {
 	readonly name: string;
 	readonly slug: string;
 	readonly visibility: "public" | "private";
+	readonly preferredChartColors: ReadonlyArray<string> | null;
 	readonly events: Metric;
 	readonly errors: Metric;
 	readonly users: Metric;

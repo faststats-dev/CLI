@@ -42,6 +42,7 @@ export type Tokens = typeof tokens;
 export const theme = {
 	bg: tokens.background,
 	surface: tokens.card,
+	muted: tokens.muted,
 	border: tokens.border,
 	borderStrong: "#3d3d3d",
 	text: tokens.foreground,

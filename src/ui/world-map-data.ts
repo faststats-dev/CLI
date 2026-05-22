@@ -6,6 +6,10 @@ import type {
 } from "geojson";
 import { feature } from "topojson-client";
 import type { GeometryCollection, Topology } from "topojson-specification";
+import {
+	ISO_ALPHA2_TO_NUMERIC,
+	ISO_ALPHA3_TO_NUMERIC,
+} from "../data/iso-alpha2-numeric.ts";
 import worldTopology from "world-atlas/countries-110m.json" with {
 	type: "json",
 };
@@ -55,13 +59,40 @@ for (let i = 0; i < COUNTRIES.length; i++) {
 	}
 }
 
+function resolveNumericCountryId(idOrName: string): string | null {
+	const trimmed = idOrName.trim();
+	if (!trimmed) return null;
+
+	const byId = COUNTRY_INDEX_BY_ID.get(trimmed);
+	if (byId !== undefined) return trimmed;
+
+	const padded = trimmed.padStart(3, "0");
+	if (padded !== trimmed && COUNTRY_INDEX_BY_ID.has(padded)) {
+		return padded;
+	}
+
+	const upper = trimmed.toUpperCase();
+	if (upper.length === 2) {
+		return ISO_ALPHA2_TO_NUMERIC[upper] ?? null;
+	}
+	if (upper.length === 3 && /^[A-Z]{3}$/.test(upper)) {
+		return ISO_ALPHA3_TO_NUMERIC[upper] ?? null;
+	}
+	return null;
+}
+
 export function findCountryIndex(
 	idOrName: string | undefined | null,
 ): number | null {
 	if (!idOrName) return null;
-	const byId = COUNTRY_INDEX_BY_ID.get(idOrName);
-	if (byId !== undefined) return byId;
-	const byName = COUNTRY_INDEX_BY_NAME.get(idOrName.toLowerCase());
+
+	const numericId = resolveNumericCountryId(idOrName);
+	if (numericId != null) {
+		const byId = COUNTRY_INDEX_BY_ID.get(numericId);
+		if (byId !== undefined) return byId;
+	}
+
+	const byName = COUNTRY_INDEX_BY_NAME.get(idOrName.trim().toLowerCase());
 	if (byName !== undefined) return byName;
 	return null;
 }
