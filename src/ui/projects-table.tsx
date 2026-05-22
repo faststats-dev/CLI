@@ -1,11 +1,12 @@
 import {
-	type CliRenderer,
-	createCliRenderer,
-	type ScrollBoxRenderable,
-	TextAttributes,
+    type CliRenderer,
+    createCliRenderer,
+    type KeyEvent,
+    type ScrollBoxRenderable,
+    TextAttributes,
 } from "@opentui/core";
 import { render, useKeyboard, useRenderer } from "@opentui/solid";
-import { createEffect, createMemo, createSignal, For } from "solid-js";
+import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
 import { formatWidgetValue } from "../data/chart-data.ts";
 import type { Metric, Project, Trend } from "../data/project.ts";
 import { chartColor, theme } from "./theme.ts";
@@ -43,6 +44,26 @@ function padLeft(text: string, width: number): string {
 function listContentHeight(count: number): number {
 	if (count <= 0) return 0;
 	return count * ROW_HEIGHT + (count - 1) * ROW_GAP;
+}
+
+function projectMatchesQuery(project: Project, query: string): boolean {
+	const normalized = query.trim().toLowerCase();
+	if (!normalized) return true;
+	return (
+		project.name.toLowerCase().includes(normalized) ||
+		project.slug.toLowerCase().includes(normalized)
+	);
+}
+
+const SEARCH_NAV_KEYS = new Set(["j", "k", "g", "q"]);
+
+function isSearchKey(key: KeyEvent, hasSearch: boolean): boolean {
+	if (key.ctrl || key.meta) return false;
+	if (key.sequence.length !== 1) return false;
+	const ch = key.sequence;
+	if (ch < "!" || ch > "~" || ch === " ") return false;
+	if (!hasSearch && SEARCH_NAV_KEYS.has(ch)) return false;
+	return true;
 }
 
 export interface RunProjectsTableOptions {
@@ -88,12 +109,24 @@ interface ProjectsAppProps {
 
 function ProjectsApp(props: ProjectsAppProps) {
 	const renderer = useRenderer();
-	const projects = () => props.options.projects;
-	const projectCount = () => projects().length;
+	const allProjects = () => props.options.projects;
+	const [searchQuery, setSearchQuery] = createSignal("");
+	const filteredProjects = createMemo(() => {
+		const query = searchQuery();
+		return allProjects().filter((project) => projectMatchesQuery(project, query));
+	});
+	const projectCount = () => filteredProjects().length;
 	const [selectedIndex, setSelectedIndex] = createSignal(0);
 	const listHeight = createMemo(() => listContentHeight(projectCount()));
 
 	let scrollBox: ScrollBoxRenderable | undefined;
+
+	createEffect(() => {
+		searchQuery();
+		setSelectedIndex((current) =>
+			Math.min(current, Math.max(0, projectCount() - 1)),
+		);
+	});
 
 	createEffect(() => {
 		const index = selectedIndex();
@@ -107,7 +140,7 @@ function ProjectsApp(props: ProjectsAppProps) {
 	};
 
 	const select = () => {
-		const project = projects()[selectedIndex()];
+		const project = filteredProjects()[selectedIndex()];
 		if (!project) return;
 		props.setOutcome({ kind: "selected", project });
 		renderer.destroy();
@@ -118,7 +151,35 @@ function ProjectsApp(props: ProjectsAppProps) {
 		renderer.destroy();
 	};
 
+	const clearSearch = () => {
+		setSearchQuery("");
+		setSelectedIndex(0);
+	};
+
 	useKeyboard((key) => {
+		if (key.name === "backspace") {
+			if (searchQuery()) {
+				setSearchQuery((query) => query.slice(0, -1));
+				return;
+			}
+			return;
+		}
+
+		if (key.name === "escape") {
+			if (searchQuery()) {
+				clearSearch();
+				return;
+			}
+			cancel();
+			return;
+		}
+
+		if (isSearchKey(key, searchQuery().length > 0)) {
+			setSearchQuery((query) => query + key.sequence);
+			setSelectedIndex(0);
+			return;
+		}
+
 		switch (key.name) {
 			case "up":
 			case "k":
@@ -146,7 +207,6 @@ function ProjectsApp(props: ProjectsAppProps) {
 			case "space":
 				select();
 				break;
-			case "escape":
 			case "q":
 				cancel();
 				break;
@@ -166,6 +226,9 @@ function ProjectsApp(props: ProjectsAppProps) {
 			paddingY={1}
 		>
 			<Header title={props.options.title} />
+			<Show when={searchQuery()}>
+				<SearchBar query={searchQuery()} />
+			</Show>
 			<ColumnLabels />
 			<Divider />
 			<scrollbox
@@ -191,20 +254,33 @@ function ProjectsApp(props: ProjectsAppProps) {
 					},
 				}}
 			>
-				<box flexDirection="column" gap={ROW_GAP} width="100%">
-					<For each={projects()}>
-						{(project, index) => (
-							<Row
-								project={project}
-								accent={chartColor(index())}
-								selected={index() === selectedIndex()}
-							/>
-						)}
-					</For>
-				</box>
+				<Show
+					when={projectCount() > 0}
+					fallback={
+						<box height={3} alignItems="center" justifyContent="center">
+							<text fg={theme.textMuted}>No matching projects</text>
+						</box>
+					}
+				>
+					<box flexDirection="column" gap={ROW_GAP} width="100%">
+						<For each={filteredProjects()}>
+							{(project, index) => (
+								<Row
+									project={project}
+									accent={chartColor(index())}
+									selected={index() === selectedIndex()}
+								/>
+							)}
+						</For>
+					</box>
+				</Show>
 			</scrollbox>
 			<Divider />
-			<Footer count={projectCount()} />
+			<Footer
+				count={projectCount()}
+				totalCount={allProjects().length}
+				searchQuery={searchQuery()}
+			/>
 		</box>
 	);
 }
@@ -215,7 +291,9 @@ function Header(props: { title: string }) {
 			<text fg={theme.textBright} attributes={TextAttributes.BOLD} flexGrow={1}>
 				{props.title}
 			</text>
-			<text fg={theme.textMuted}>↑↓ navigate ↵ select q quit</text>
+			<text fg={theme.textMuted}>
+				type to search · ↑↓ navigate · ↵ select · esc clear · q quit
+			</text>
 		</box>
 	);
 }
@@ -247,15 +325,36 @@ function ColumnLabels() {
 	);
 }
 
+function SearchBar(props: { query: string }) {
+	return (
+		<box flexDirection="row" height={1} marginBottom={1} flexShrink={0}>
+			<text fg={theme.textMuted}>/</text>
+			<text fg={theme.selectedAccent}>{props.query}</text>
+			<text fg={theme.textMuted}>█</text>
+		</box>
+	);
+}
+
 function Divider() {
 	return <box height={1} backgroundColor={theme.border} flexShrink={0} />;
 }
 
-function Footer(props: { count: number }) {
+function Footer(props: {
+	count: number;
+	totalCount: number;
+	searchQuery: string;
+}) {
+	const label = () => {
+		if (props.searchQuery) {
+			return `${props.count}/${props.totalCount} matching`;
+		}
+		return `${props.count} project${props.count === 1 ? "" : "s"}`;
+	};
+
 	return (
 		<box flexDirection="row" height={1} marginTop={1} flexShrink={0}>
 			<text fg={theme.textMuted} flexGrow={1}>
-				{props.count} project{props.count === 1 ? "" : "s"}
+				{label()}
 			</text>
 			<text fg={theme.textMuted}>live</text>
 		</box>
