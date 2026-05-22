@@ -1,37 +1,60 @@
 import { Console, Effect } from "effect";
 import { Command } from "effect/unstable/cli";
 import { FastStatsApi } from "../api-client.ts";
-import type { ChartData, ChartFlowMetaLite, ChartQueryConfigLite } from "../data/chart-data.ts";
 import type { ChartsListCharts200 } from "../api.ts";
-import type { Project } from "../data/project.ts";
+import { toFiniteNumber } from "../data/chart-data.ts";
+import type { ChartQueryConfigLite } from "../data/chart-data.ts";
 import {
-    type ChartLite,
-    type DashboardLite,
-    type GridPosition,
-    runDashboardView,
+	EMPTY_METRIC,
+	metricFromChange,
+	type Project,
+} from "../data/project.ts";
+import {
+	type ChartLite,
+	type DashboardLite,
+	type GridPosition,
+	runDashboardView,
 } from "../ui/dashboard-view.tsx";
 import { runProjectsTable } from "../ui/projects-table.tsx";
 
-const DEFAULT_TIME_RANGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
-
-const FLAT_TREND = { direction: "flat", percent: 0 } as const;
-const ZERO_METRIC = { value: 0, trend: FLAT_TREND } as const;
+const DEFAULT_TIME_RANGE_MS = 7 * 24 * 60 * 60 * 1000;
 
 export const projectsCommand = Command.make("projects", {}, () =>
 	Effect.gen(function* () {
 		const api = yield* FastStatsApi;
 		const response = yield* api.ProjectsListProjects(undefined);
+		const dashboardStats = yield* api.MetricsGetProjectsDashboardData({
+			payload: { projectIds: response.items.map((item) => item.id) },
+		});
 
-		const projects: ReadonlyArray<Project> = response.items.map((item) => ({
-			id: item.id,
-			name: item.name,
-			slug: `/${item.slug}`,
-			visibility: item.private ? "private" : "public",
-			preferredChartColors: item.preferredChartColors,
-			events: ZERO_METRIC,
-			errors: ZERO_METRIC,
-			users: ZERO_METRIC,
-		}));
+		const projects: ReadonlyArray<Project> = response.items.map((item) => {
+			const stats = dashboardStats.stats[item.id];
+			return {
+				id: item.id,
+				name: item.name,
+				slug: `/${item.slug}`,
+				visibility: item.private ? "private" : "public",
+				preferredChartColors: item.preferredChartColors,
+				events: stats
+					? metricFromChange(
+							toFiniteNumber(stats.events),
+							toFiniteNumber(stats.eventsChange),
+						)
+					: EMPTY_METRIC,
+				errors: stats
+					? metricFromChange(
+							toFiniteNumber(stats.errors),
+							toFiniteNumber(stats.errorsChange),
+						)
+					: EMPTY_METRIC,
+				users: stats
+					? metricFromChange(
+							toFiniteNumber(stats.users),
+							toFiniteNumber(stats.usersChange),
+						)
+					: EMPTY_METRIC,
+			};
+		});
 
 		while (true) {
 			const result = yield* Effect.tryPromise(() =>
@@ -54,40 +77,30 @@ export const projectsCommand = Command.make("projects", {}, () =>
 				{ concurrency: "unbounded" },
 			);
 
-			const chartDataByDashboard = yield* Effect.all(
-				dashboards.map((dashboard) =>
-					api.MetricsLoadDashboardData({
-						payload: {
-							projectId: project.id,
-							dashboardId: dashboard.id,
-							timeRange: {
-								type: "relative",
-								maxAgeMs: DEFAULT_TIME_RANGE_MS,
+			const chartDataByDashboard = new Map(
+				(yield* Effect.all(
+					dashboards.map((dashboard) =>
+						api.MetricsLoadDashboardData({
+							payload: {
+								projectId: project.id,
+								dashboardId: dashboard.id,
+								timeRange: {
+									type: "relative",
+									maxAgeMs: DEFAULT_TIME_RANGE_MS,
+								},
 							},
-						},
-					}).pipe(
-						Effect.map((response) => ({
-							dashboardId: dashboard.id,
-							charts: response.charts,
-							flowMeta: response.flowMeta ?? null,
-						})),
+						}).pipe(
+							Effect.map((response) => [
+								dashboard.id,
+								{
+									charts: response.charts,
+									flowMeta: response.flowMeta ?? null,
+								},
+							] as const),
+						),
 					),
-				),
-				{ concurrency: "unbounded" },
-			).pipe(
-				Effect.map((results) => {
-					const byDashboard = new Map<
-						string,
-						{
-							charts: Record<string, ChartData>;
-							flowMeta: Record<string, ChartFlowMetaLite> | null;
-						}
-					>();
-					for (const { dashboardId, charts, flowMeta } of results) {
-						byDashboard.set(dashboardId, { charts, flowMeta });
-					}
-					return byDashboard;
-				}),
+					{ concurrency: "unbounded" },
+				)),
 			);
 
 			const dashboardLite: ReadonlyArray<DashboardLite> = dashboards.map(
@@ -140,19 +153,12 @@ function toGridPosition(
 		| undefined,
 ): GridPosition | null {
 	if (!pos) return null;
-	const x = toFiniteOrNull(pos.x);
-	const y = toFiniteOrNull(pos.y);
-	const w = toFiniteOrNull(pos.w);
-	const h = toFiniteOrNull(pos.h);
-	if (x === null || y === null || w === null || h === null) return null;
+	const x = toFiniteNumber(pos.x);
+	const y = toFiniteNumber(pos.y);
+	const w = toFiniteNumber(pos.w);
+	const h = toFiniteNumber(pos.h);
+	if (x == null || y == null || w == null || h == null) return null;
 	return { x, y, w, h };
-}
-
-function toFiniteOrNull(
-	value: number | "NaN" | "Infinity" | "-Infinity",
-): number | null {
-	if (typeof value === "number" && Number.isFinite(value)) return value;
-	return null;
 }
 
 type ApiChartQueryConfig = NonNullable<ChartsListCharts200[number]["queryConfig"]>;

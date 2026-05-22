@@ -18,3 +18,28 @@ export interface Project {
 	readonly errors: Metric;
 	readonly users: Metric;
 }
+
+export const EMPTY_METRIC: Metric = {
+	value: 0,
+	trend: { direction: "flat", percent: 0 },
+};
+
+export function trendFromChange(change: number | null): Trend {
+	if (change == null || change === 0) {
+		return { direction: "flat", percent: 0 };
+	}
+	return {
+		direction: change > 0 ? "up" : "down",
+		percent: Math.abs(change),
+	};
+}
+
+export function metricFromChange(
+	value: number | null,
+	change: number | null,
+): Metric {
+	return {
+		value: value ?? 0,
+		trend: trendFromChange(change),
+	};
+}

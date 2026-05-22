@@ -1,38 +1,27 @@
 import {
-    type CliRenderer,
-    createCliRenderer,
-    TextAttributes,
+	type CliRenderer,
+	createCliRenderer,
+	type ScrollBoxRenderable,
+	TextAttributes,
 } from "@opentui/core";
 import { render, useKeyboard, useRenderer } from "@opentui/solid";
-import { createSignal, For } from "solid-js";
+import { createEffect, createMemo, createSignal, For } from "solid-js";
+import { formatWidgetValue } from "../data/chart-data.ts";
 import type { Metric, Project, Trend } from "../data/project.ts";
 import { chartColor, theme } from "./theme.ts";
 
-interface Column {
-	readonly id: "project" | "events" | "errors" | "users";
-	readonly label: string;
-	readonly width: number;
-}
-
-const COLUMNS: ReadonlyArray<Column> = [
-	{ id: "project", label: "Project", width: 0 },
-	{ id: "events", label: "Events", width: 14 },
-	{ id: "errors", label: "Errors", width: 12 },
-	{ id: "users", label: "Users", width: 14 },
-];
+const METRIC_COLUMNS = [
+	{ label: "Events", width: 14 },
+	{ label: "Errors", width: 12 },
+	{ label: "Users", width: 14 },
+] as const;
 
 const VISIBILITY_GLYPH = { public: "○", private: "⌧" } as const;
 
 const ROW_HEIGHT = 3;
 const ROW_GAP = 1;
+const ROW_STRIDE = ROW_HEIGHT + ROW_GAP;
 const AVATAR_WIDTH = 3;
-
-function formatCount(value: number): string {
-	if (value === 0) return "0";
-	if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
-	if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
-	return value.toString();
-}
 
 function formatTrend(trend: Trend): { text: string; color: string } {
 	if (trend.direction === "flat" || trend.percent === 0) {
@@ -49,6 +38,11 @@ function padLeft(text: string, width: number): string {
 	return text.length >= width
 		? text.slice(0, width)
 		: " ".repeat(width - text.length) + text;
+}
+
+function listContentHeight(count: number): number {
+	if (count <= 0) return 0;
+	return count * ROW_HEIGHT + (count - 1) * ROW_GAP;
 }
 
 export interface RunProjectsTableOptions {
@@ -94,8 +88,17 @@ interface ProjectsAppProps {
 
 function ProjectsApp(props: ProjectsAppProps) {
 	const renderer = useRenderer();
-	const projectCount = () => props.options.projects.length;
+	const projects = () => props.options.projects;
+	const projectCount = () => projects().length;
 	const [selectedIndex, setSelectedIndex] = createSignal(0);
+	const listHeight = createMemo(() => listContentHeight(projectCount()));
+
+	let scrollBox: ScrollBoxRenderable | undefined;
+
+	createEffect(() => {
+		const index = selectedIndex();
+		scrollBox?.scrollTo({ x: 0, y: index * ROW_STRIDE });
+	});
 
 	const moveBy = (delta: number) => {
 		setSelectedIndex((current) =>
@@ -104,7 +107,7 @@ function ProjectsApp(props: ProjectsAppProps) {
 	};
 
 	const select = () => {
-		const project = props.options.projects[selectedIndex()];
+		const project = projects()[selectedIndex()];
 		if (!project) return;
 		props.setOutcome({ kind: "selected", project });
 		renderer.destroy();
@@ -165,17 +168,41 @@ function ProjectsApp(props: ProjectsAppProps) {
 			<Header title={props.options.title} />
 			<ColumnLabels />
 			<Divider />
-			<box flexDirection="column" gap={ROW_GAP} marginY={1} flexGrow={1}>
-				<For each={props.options.projects}>
-					{(project, index) => (
-						<Row
-							project={project}
-							accent={chartColor(index())}
-							selected={index() === selectedIndex()}
-						/>
-					)}
-				</For>
-			</box>
+			<scrollbox
+				ref={(el) => {
+					scrollBox = el ?? undefined;
+				}}
+				flexGrow={1}
+				flexShrink={1}
+				minHeight={0}
+				marginY={1}
+				width="100%"
+				scrollX={false}
+				scrollY={true}
+				viewportCulling={true}
+				contentOptions={{
+					width: "100%",
+					height: listHeight(),
+				}}
+				verticalScrollbarOptions={{
+					trackOptions: {
+						backgroundColor: theme.surface,
+						foregroundColor: theme.borderStrong,
+					},
+				}}
+			>
+				<box flexDirection="column" gap={ROW_GAP} width="100%">
+					<For each={projects()}>
+						{(project, index) => (
+							<Row
+								project={project}
+								accent={chartColor(index())}
+								selected={index() === selectedIndex()}
+							/>
+						)}
+					</For>
+				</box>
+			</scrollbox>
 			<Divider />
 			<Footer count={projectCount()} />
 		</box>
@@ -184,7 +211,7 @@ function ProjectsApp(props: ProjectsAppProps) {
 
 function Header(props: { title: string }) {
 	return (
-		<box flexDirection="row" height={1} marginBottom={1}>
+		<box flexDirection="row" height={1} marginBottom={1} flexShrink={0}>
 			<text fg={theme.textBright} attributes={TextAttributes.BOLD} flexGrow={1}>
 				{props.title}
 			</text>
@@ -195,35 +222,38 @@ function Header(props: { title: string }) {
 
 function ColumnLabels() {
 	return (
-		<box flexDirection="row" height={1} paddingLeft={4}>
-			<For each={COLUMNS}>
-				{(column) => {
-					const isProject = column.id === "project";
-					const label = isProject ? `${column.label} ↑` : `${column.label} ⇅`;
-					return (
-						<text
-							fg={theme.textMuted}
-							attributes={TextAttributes.BOLD}
-							flexGrow={isProject ? 1 : 0}
-							flexShrink={isProject ? 1 : 0}
-							width={isProject ? "auto" : column.width}
-						>
-							{isProject ? label : padLeft(label, column.width)}
-						</text>
-					);
-				}}
+		<box flexDirection="row" height={1} paddingLeft={4} flexShrink={0}>
+			<text
+				fg={theme.textMuted}
+				attributes={TextAttributes.BOLD}
+				flexGrow={1}
+				flexShrink={1}
+			>
+				Project ↑
+			</text>
+			<For each={METRIC_COLUMNS}>
+				{(column) => (
+					<text
+						fg={theme.textMuted}
+						attributes={TextAttributes.BOLD}
+						flexShrink={0}
+						width={column.width}
+					>
+						{padLeft(`${column.label} ⇅`, column.width)}
+					</text>
+				)}
 			</For>
 		</box>
 	);
 }
 
 function Divider() {
-	return <box height={1} backgroundColor={theme.border} />;
+	return <box height={1} backgroundColor={theme.border} flexShrink={0} />;
 }
 
 function Footer(props: { count: number }) {
 	return (
-		<box flexDirection="row" height={1} marginTop={1}>
+		<box flexDirection="row" height={1} marginTop={1} flexShrink={0}>
 			<text fg={theme.textMuted} flexGrow={1}>
 				{props.count} project{props.count === 1 ? "" : "s"}
 			</text>
@@ -243,6 +273,7 @@ function Row(props: RowProps) {
 		<box
 			flexDirection="row"
 			height={ROW_HEIGHT}
+			flexShrink={0}
 			backgroundColor={props.selected ? theme.selectedBg : theme.bg}
 			alignItems="stretch"
 		>
@@ -258,11 +289,7 @@ function Row(props: RowProps) {
 				</text>
 			</box>
 
-			<box
-				flexDirection="column"
-				flexGrow={1}
-				justifyContent="center"
-			>
+			<box flexDirection="column" flexGrow={1} justifyContent="center">
 				<box flexDirection="row" height={1}>
 					<text
 						fg={props.selected ? theme.selectedAccent : theme.textBright}
@@ -297,7 +324,7 @@ function MetricValue(props: { metric: Metric; width: number }) {
 			flexShrink={0}
 			fg={props.metric.value === 0 ? theme.textMuted : theme.text}
 		>
-			{padLeft(formatCount(props.metric.value), props.width)}
+			{padLeft(formatWidgetValue(props.metric.value), props.width)}
 		</text>
 	);
 }

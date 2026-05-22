@@ -33,10 +33,6 @@ export function ChartEmptyState(props: { readonly message?: string }) {
 	);
 }
 
-function resolveListHeaderTitle(): string {
-	return "Name";
-}
-
 function resolveListMetricLabel(
 	queryConfig: ChartQueryConfigLite | null | undefined,
 ): string {
@@ -55,27 +51,22 @@ export function ListChart(props: SeriesChartProps) {
 		parseSeriesEntries(rows(), resolveMetricKey(props.queryConfig)),
 	);
 	const showHeader = createMemo(() => props.innerHeight >= 3);
-	const maxRows = createMemo(() =>
-		Math.max(1, props.innerHeight - (showHeader() ? 1 : 0)),
-	);
-	const visible = createMemo(() => entries().slice(0, maxRows()));
 	const maxValue = createMemo(() => {
 		const items = entries();
 		if (items.length === 0) return 0;
 		return Math.max(...items.map((item) => item.value));
 	});
 	const valueWidth = createMemo(() => {
-		const widths = visible().map(
+		const widths = entries().map(
 			(entry) => formatWidgetValue(entry.value).length,
 		);
 		return Math.max(5, ...widths, 5);
 	});
-	const headerTitle = () => resolveListHeaderTitle();
 	const metricLabel = () => resolveListMetricLabel(props.queryConfig);
 
 	return (
 		<Show
-			when={visible().length > 0}
+			when={entries().length > 0}
 			fallback={<ChartEmptyState message="No items" />}
 		>
 			<box flexDirection="column" width="100%" height="100%" minHeight={0}>
@@ -88,31 +79,47 @@ export function ListChart(props: SeriesChartProps) {
 						backgroundColor={theme.muted}
 					>
 						<text fg={theme.textMuted} flexGrow={1} flexShrink={1}>
-							{truncateLabel(headerTitle(), Math.max(8, props.innerWidth - valueWidth() - 1))}
+							{truncateLabel(
+								"Name",
+								Math.max(8, props.innerWidth - valueWidth() - 1),
+							)}
 						</text>
 						<text fg={theme.textMuted} flexShrink={0}>
 							{truncateLabel(metricLabel(), valueWidth())}
 						</text>
 					</box>
 				</Show>
-				<For each={visible()}>
-					{(entry) => (
-						<ListRow
-							name={entry.name}
-							value={entry.value}
-							maxValue={maxValue()}
-							innerWidth={props.innerWidth}
-							valueWidth={valueWidth()}
-						/>
-					)}
-				</For>
-				<Show when={entries().length > maxRows()}>
-					<box height={1} flexShrink={0}>
-						<text fg={theme.textMuted}>
-							+{entries().length - maxRows()} more
-						</text>
-					</box>
-				</Show>
+				<scrollbox
+					flexGrow={1}
+					flexShrink={1}
+					minHeight={0}
+					width="100%"
+					scrollX={false}
+					scrollY={true}
+					viewportCulling={true}
+					contentOptions={{
+						width: "100%",
+						height: entries().length,
+					}}
+					verticalScrollbarOptions={{
+						trackOptions: {
+							backgroundColor: theme.surface,
+							foregroundColor: theme.borderStrong,
+						},
+					}}
+				>
+					<For each={entries()}>
+						{(entry) => (
+							<ListRow
+								name={entry.name}
+								value={entry.value}
+								maxValue={maxValue()}
+								innerWidth={props.innerWidth}
+								valueWidth={valueWidth()}
+							/>
+						)}
+					</For>
+				</scrollbox>
 			</box>
 		</Show>
 	);
