@@ -46,23 +46,51 @@ function listContentHeight(count: number): number {
 	return count * ROW_HEIGHT + (count - 1) * ROW_GAP;
 }
 
-function projectMatchesQuery(project: Project, query: string): boolean {
-	const normalized = query.trim().toLowerCase();
-	if (!normalized) return true;
-	return (
-		project.name.toLowerCase().includes(normalized) ||
-		project.slug.toLowerCase().includes(normalized)
-	);
+function projectSearchScore(project: Project, query: string): number | null {
+	const q = query.trim().toLowerCase();
+	if (!q) return 0;
+
+	const name = project.name.toLowerCase();
+	const slug = project.slug.toLowerCase();
+	const slugBare = slug.startsWith("/") ? slug.slice(1) : slug;
+
+	if (name === q || slug === q || slugBare === q) return 100;
+	if (name.startsWith(q) || slugBare.startsWith(q) || slug.startsWith(q)) return 80;
+	if (name.includes(q) || slugBare.includes(q)) return 60;
+	return null;
 }
 
-const SEARCH_NAV_KEYS = new Set(["j", "k", "g", "q"]);
+function searchProjects(
+	projects: ReadonlyArray<Project>,
+	query: string,
+): ReadonlyArray<Project> {
+	const q = query.trim();
+	if (!q) return projects;
 
-function isSearchKey(key: KeyEvent, hasSearch: boolean): boolean {
+	return projects
+		.map((project) => ({ project, score: projectSearchScore(project, q) }))
+		.filter(
+			(entry): entry is { project: Project; score: number } =>
+				entry.score != null && entry.score > 0,
+		)
+		.sort(
+			(a, b) =>
+				b.score - a.score ||
+				a.project.name.localeCompare(b.project.name, undefined, {
+					sensitivity: "base",
+				}),
+		)
+		.map((entry) => entry.project);
+}
+
+function isTypingKey(key: KeyEvent, searching: boolean): boolean {
 	if (key.ctrl || key.meta) return false;
 	if (key.sequence.length !== 1) return false;
 	const ch = key.sequence;
 	if (ch < "!" || ch > "~" || ch === " ") return false;
-	if (!hasSearch && SEARCH_NAV_KEYS.has(ch)) return false;
+	if (!searching && (ch === "j" || ch === "k" || ch === "g" || ch === "q")) {
+		return false;
+	}
 	return true;
 }
 
@@ -111,11 +139,10 @@ function ProjectsApp(props: ProjectsAppProps) {
 	const renderer = useRenderer();
 	const allProjects = () => props.options.projects;
 	const [searchQuery, setSearchQuery] = createSignal("");
-	const filteredProjects = createMemo(() => {
-		const query = searchQuery();
-		return allProjects().filter((project) => projectMatchesQuery(project, query));
-	});
-	const projectCount = () => filteredProjects().length;
+	const visibleProjects = createMemo(() =>
+		searchProjects(allProjects(), searchQuery()),
+	);
+	const projectCount = () => visibleProjects().length;
 	const [selectedIndex, setSelectedIndex] = createSignal(0);
 	const listHeight = createMemo(() => listContentHeight(projectCount()));
 
@@ -123,9 +150,7 @@ function ProjectsApp(props: ProjectsAppProps) {
 
 	createEffect(() => {
 		searchQuery();
-		setSelectedIndex((current) =>
-			Math.min(current, Math.max(0, projectCount() - 1)),
-		);
+		setSelectedIndex(0);
 	});
 
 	createEffect(() => {
@@ -140,7 +165,7 @@ function ProjectsApp(props: ProjectsAppProps) {
 	};
 
 	const select = () => {
-		const project = filteredProjects()[selectedIndex()];
+		const project = visibleProjects()[selectedIndex()];
 		if (!project) return;
 		props.setOutcome({ kind: "selected", project });
 		renderer.destroy();
@@ -151,32 +176,23 @@ function ProjectsApp(props: ProjectsAppProps) {
 		renderer.destroy();
 	};
 
-	const clearSearch = () => {
-		setSearchQuery("");
-		setSelectedIndex(0);
-	};
-
 	useKeyboard((key) => {
 		if (key.name === "backspace") {
-			if (searchQuery()) {
-				setSearchQuery((query) => query.slice(0, -1));
-				return;
-			}
+			if (searchQuery()) setSearchQuery((query) => query.slice(0, -1));
 			return;
 		}
 
 		if (key.name === "escape") {
 			if (searchQuery()) {
-				clearSearch();
+				setSearchQuery("");
 				return;
 			}
 			cancel();
 			return;
 		}
 
-		if (isSearchKey(key, searchQuery().length > 0)) {
+		if (isTypingKey(key, searchQuery().length > 0)) {
 			setSearchQuery((query) => query + key.sequence);
-			setSelectedIndex(0);
 			return;
 		}
 
@@ -225,10 +241,7 @@ function ProjectsApp(props: ProjectsAppProps) {
 			paddingX={2}
 			paddingY={1}
 		>
-			<Header title={props.options.title} />
-			<Show when={searchQuery()}>
-				<SearchBar query={searchQuery()} />
-			</Show>
+			<Header title={props.options.title} searchQuery={searchQuery()} />
 			<ColumnLabels />
 			<Divider />
 			<scrollbox
@@ -263,7 +276,7 @@ function ProjectsApp(props: ProjectsAppProps) {
 					}
 				>
 					<box flexDirection="column" gap={ROW_GAP} width="100%">
-						<For each={filteredProjects()}>
+						<For each={visibleProjects()}>
 							{(project, index) => (
 								<Row
 									project={project}
@@ -285,15 +298,21 @@ function ProjectsApp(props: ProjectsAppProps) {
 	);
 }
 
-function Header(props: { title: string }) {
+function Header(props: { title: string; searchQuery: string }) {
 	return (
-		<box flexDirection="row" height={1} marginBottom={1} flexShrink={0}>
-			<text fg={theme.textBright} attributes={TextAttributes.BOLD} flexGrow={1}>
-				{props.title}
-			</text>
-			<text fg={theme.textMuted}>
-				type to search · ↑↓ navigate · ↵ select · esc clear · q quit
-			</text>
+		<box flexDirection="column" flexShrink={0} marginBottom={1}>
+			<box flexDirection="row" height={1}>
+				<text fg={theme.textBright} attributes={TextAttributes.BOLD} flexGrow={1}>
+					{props.title}
+				</text>
+				<text fg={theme.textMuted}>↑↓ ↵ select · esc clear · q quit</text>
+			</box>
+			<Show when={props.searchQuery}>
+				<box flexDirection="row" height={1} marginTop={1}>
+					<text fg={theme.textMuted}>/</text>
+					<text fg={theme.selectedAccent}>{props.searchQuery}</text>
+				</box>
+			</Show>
 		</box>
 	);
 }
@@ -321,16 +340,6 @@ function ColumnLabels() {
 					</text>
 				)}
 			</For>
-		</box>
-	);
-}
-
-function SearchBar(props: { query: string }) {
-	return (
-		<box flexDirection="row" height={1} marginBottom={1} flexShrink={0}>
-			<text fg={theme.textMuted}>/</text>
-			<text fg={theme.selectedAccent}>{props.query}</text>
-			<text fg={theme.textMuted}>█</text>
 		</box>
 	);
 }
