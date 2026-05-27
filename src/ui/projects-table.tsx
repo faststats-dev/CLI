@@ -5,74 +5,75 @@ import {
     type ScrollBoxRenderable,
     TextAttributes,
 } from "@opentui/core";
-import { render, useKeyboard, useRenderer } from "@opentui/solid";
-import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
+import { render, useKeyboard } from "@opentui/solid";
+import {
+    createEffect,
+    createMemo,
+    createSignal,
+    For,
+    Show,
+    type Accessor,
+} from "solid-js";
 import { formatWidgetValue } from "../data/chart-data.ts";
 import type { Metric, Project, Trend } from "../data/project.ts";
 import { chartColor, theme } from "./theme.ts";
 
-const METRIC_COLUMNS = [
-	{ label: "Events", width: 14 },
-	{ label: "Errors", width: 12 },
-	{ label: "Users", width: 14 },
-] as const;
+const PROJECT_METRICS = [
+	{ key: "events", label: "Events", width: 14 },
+	{ key: "errors", label: "Errors", width: 12 },
+	{ key: "users", label: "Users", width: 14 },
+] as const satisfies ReadonlyArray<{
+	key: "events" | "errors" | "users";
+	label: string;
+	width: number;
+}>;
 
 const VISIBILITY_GLYPH = { public: "○", private: "⌧" } as const;
-
 const ROW_HEIGHT = 3;
 const ROW_GAP = 1;
 const ROW_STRIDE = ROW_HEIGHT + ROW_GAP;
 const AVATAR_WIDTH = 3;
 
-function formatTrend(trend: Trend): { text: string; color: string } {
+const padLeft = (text: string, width: number) =>
+	text.length >= width ? text.slice(0, width) : " ".repeat(width - text.length) + text;
+
+const listContentHeight = (count: number) =>
+	count <= 0 ? 0 : count * ROW_HEIGHT + (count - 1) * ROW_GAP;
+
+const formatTrend = (trend: Trend): { text: string; color: string } => {
 	if (trend.direction === "flat" || trend.percent === 0) {
 		return { text: "—", color: theme.textMuted };
 	}
 	const arrow = trend.direction === "up" ? "↑" : "↓";
-	const color = trend.direction === "up" ? theme.success : theme.danger;
-	const pct =
-		trend.percent >= 10 ? trend.percent.toFixed(0) : trend.percent.toFixed(1);
-	return { text: `${arrow} ${pct}%`, color };
-}
+	return {
+		text: `${arrow} ${trend.percent >= 10 ? trend.percent.toFixed(0) : trend.percent.toFixed(1)}%`,
+		color: trend.direction === "up" ? theme.success : theme.danger,
+	};
+};
 
-function padLeft(text: string, width: number): string {
-	return text.length >= width
-		? text.slice(0, width)
-		: " ".repeat(width - text.length) + text;
-}
-
-function listContentHeight(count: number): number {
-	if (count <= 0) return 0;
-	return count * ROW_HEIGHT + (count - 1) * ROW_GAP;
-}
-
-function projectSearchScore(project: Project, query: string): number | null {
-	const q = query.trim().toLowerCase();
-	if (!q) return 0;
-
+const scoreProject = (project: Project, query: string): number => {
 	const name = project.name.toLowerCase();
 	const slug = project.slug.toLowerCase();
 	const slugBare = slug.startsWith("/") ? slug.slice(1) : slug;
 
-	if (name === q || slug === q || slugBare === q) return 100;
-	if (name.startsWith(q) || slugBare.startsWith(q) || slug.startsWith(q)) return 80;
-	if (name.includes(q) || slugBare.includes(q)) return 60;
-	return null;
-}
+	if (name === query || slug === query || slugBare === query) return 100;
+	if (name.startsWith(query) || slugBare.startsWith(query) || slug.startsWith(query)) {
+		return 80;
+	}
+	if (name.includes(query) || slugBare.includes(query)) return 60;
+	return 0;
+};
 
-function searchProjects(
+const filterProjects = (
 	projects: ReadonlyArray<Project>,
-	query: string,
-): ReadonlyArray<Project> {
-	const q = query.trim();
-	if (!q) return projects;
+	rawQuery: string,
+): ReadonlyArray<Project> => {
+	const query = rawQuery.trim().toLowerCase();
+	if (!query) return projects;
 
 	return projects
-		.map((project) => ({ project, score: projectSearchScore(project, q) }))
-		.filter(
-			(entry): entry is { project: Project; score: number } =>
-				entry.score != null && entry.score > 0,
-		)
+		.map((project) => ({ project, score: scoreProject(project, query) }))
+		.filter((entry) => entry.score > 0)
 		.sort(
 			(a, b) =>
 				b.score - a.score ||
@@ -81,18 +82,17 @@ function searchProjects(
 				}),
 		)
 		.map((entry) => entry.project);
-}
+};
 
-function isTypingKey(key: KeyEvent, searching: boolean): boolean {
-	if (key.ctrl || key.meta) return false;
-	if (key.sequence.length !== 1) return false;
+const isSearchKey = (key: KeyEvent, searching: boolean) => {
+	if (key.ctrl || key.meta || key.sequence.length !== 1) return false;
 	const ch = key.sequence;
 	if (ch < "!" || ch > "~" || ch === " ") return false;
 	if (!searching && (ch === "j" || ch === "k" || ch === "g" || ch === "q")) {
 		return false;
 	}
 	return true;
-}
+};
 
 export interface RunProjectsTableOptions {
 	readonly title: string;
@@ -117,8 +117,9 @@ export async function runProjectsTable(
 		() => (
 			<ProjectsApp
 				options={options}
-				setOutcome={(next) => {
+				onDone={(next) => {
 					outcome = next;
+					renderer.destroy();
 				}}
 			/>
 		),
@@ -132,49 +133,16 @@ export async function runProjectsTable(
 
 interface ProjectsAppProps {
 	options: RunProjectsTableOptions;
-	setOutcome: (next: RunProjectsTableResult) => void;
+	onDone: (result: RunProjectsTableResult) => void;
 }
 
 function ProjectsApp(props: ProjectsAppProps) {
-	const renderer = useRenderer();
-	const allProjects = () => props.options.projects;
 	const [searchQuery, setSearchQuery] = createSignal("");
 	const visibleProjects = createMemo(() =>
-		searchProjects(allProjects(), searchQuery()),
+		filterProjects(props.options.projects, searchQuery()),
 	);
-	const projectCount = () => visibleProjects().length;
-	const [selectedIndex, setSelectedIndex] = createSignal(0);
-	const listHeight = createMemo(() => listContentHeight(projectCount()));
-
-	let scrollBox: ScrollBoxRenderable | undefined;
-
-	createEffect(() => {
-		searchQuery();
-		setSelectedIndex(0);
-	});
-
-	createEffect(() => {
-		const index = selectedIndex();
-		scrollBox?.scrollTo({ x: 0, y: index * ROW_STRIDE });
-	});
-
-	const moveBy = (delta: number) => {
-		setSelectedIndex((current) =>
-			Math.max(0, Math.min(projectCount() - 1, current + delta)),
-		);
-	};
-
-	const select = () => {
-		const project = visibleProjects()[selectedIndex()];
-		if (!project) return;
-		props.setOutcome({ kind: "selected", project });
-		renderer.destroy();
-	};
-
-	const cancel = () => {
-		props.setOutcome({ kind: "cancelled" });
-		renderer.destroy();
-	};
+	const list = useSelectableList(() => visibleProjects().length);
+	const listHeight = createMemo(() => listContentHeight(visibleProjects().length));
 
 	useKeyboard((key) => {
 		if (key.name === "backspace") {
@@ -187,49 +155,48 @@ function ProjectsApp(props: ProjectsAppProps) {
 				setSearchQuery("");
 				return;
 			}
-			cancel();
+			props.onDone({ kind: "cancelled" });
 			return;
 		}
 
-		if (isTypingKey(key, searchQuery().length > 0)) {
+		if (isSearchKey(key, searchQuery().length > 0)) {
 			setSearchQuery((query) => query + key.sequence);
 			return;
 		}
 
-		switch (key.name) {
-			case "up":
-			case "k":
-				moveBy(-1);
-				break;
-			case "down":
-			case "j":
-				moveBy(1);
-				break;
-			case "home":
-			case "g":
-				setSelectedIndex(0);
-				break;
-			case "end":
-			case "G":
-				setSelectedIndex(Math.max(0, projectCount() - 1));
-				break;
-			case "pageup":
-				moveBy(-5);
-				break;
-			case "pagedown":
-				moveBy(5);
-				break;
-			case "return":
-			case "space":
-				select();
-				break;
-			case "q":
-				cancel();
-				break;
-			case "c":
-				if (key.ctrl) cancel();
-				break;
+		if (key.name === "return" || key.name === "space") {
+			const project = visibleProjects()[list.index()];
+			if (project) props.onDone({ kind: "selected", project });
+			return;
 		}
+
+		if (key.name === "q" || (key.name === "c" && key.ctrl)) {
+			props.onDone({ kind: "cancelled" });
+			return;
+		}
+
+		const navigation: Partial<Record<KeyEvent["name"], number | "start" | "end">> = {
+			up: -1,
+			k: -1,
+			down: 1,
+			j: 1,
+			pageup: -5,
+			pagedown: 5,
+			home: "start",
+			g: "start",
+			end: "end",
+			G: "end",
+		};
+
+		const action = navigation[key.name];
+		if (action === "start") list.goTo(0);
+		else if (action === "end") list.goTo(visibleProjects().length - 1);
+		else if (typeof action === "number") list.moveBy(action);
+	});
+
+	createEffect(() => {
+		searchQuery();
+		list.goTo(0);
 	});
 
 	return (
@@ -243,11 +210,9 @@ function ProjectsApp(props: ProjectsAppProps) {
 		>
 			<Header title={props.options.title} searchQuery={searchQuery()} />
 			<ColumnLabels />
-			<Divider />
+			<box height={1} backgroundColor={theme.border} flexShrink={0} />
 			<scrollbox
-				ref={(el) => {
-					scrollBox = el ?? undefined;
-				}}
+				ref={list.bindScrollTarget}
 				flexGrow={1}
 				flexShrink={1}
 				minHeight={0}
@@ -256,10 +221,7 @@ function ProjectsApp(props: ProjectsAppProps) {
 				scrollX={false}
 				scrollY={true}
 				viewportCulling={true}
-				contentOptions={{
-					width: "100%",
-					height: listHeight(),
-				}}
+				contentOptions={{ width: "100%", height: listHeight() }}
 				verticalScrollbarOptions={{
 					trackOptions: {
 						backgroundColor: theme.surface,
@@ -268,7 +230,7 @@ function ProjectsApp(props: ProjectsAppProps) {
 				}}
 			>
 				<Show
-					when={projectCount() > 0}
+					when={visibleProjects().length > 0}
 					fallback={
 						<box height={3} alignItems="center" justifyContent="center">
 							<text fg={theme.textMuted}>No matching projects</text>
@@ -278,24 +240,50 @@ function ProjectsApp(props: ProjectsAppProps) {
 					<box flexDirection="column" gap={ROW_GAP} width="100%">
 						<For each={visibleProjects()}>
 							{(project, index) => (
-								<Row
+								<ProjectRow
 									project={project}
 									accent={chartColor(index())}
-									selected={index() === selectedIndex()}
+									selected={index() === list.index()}
 								/>
 							)}
 						</For>
 					</box>
 				</Show>
 			</scrollbox>
-			<Divider />
+			<box height={1} backgroundColor={theme.border} flexShrink={0} />
 			<Footer
-				count={projectCount()}
-				totalCount={allProjects().length}
+				visibleCount={visibleProjects().length}
+				totalCount={props.options.projects.length}
 				searchQuery={searchQuery()}
 			/>
 		</box>
 	);
+}
+
+function useSelectableList(itemCount: Accessor<number>) {
+	const [index, setIndex] = createSignal(0);
+	let scrollTarget: ScrollBoxRenderable | undefined;
+
+	const clamp = (value: number) =>
+		Math.max(0, Math.min(Math.max(0, itemCount() - 1), value));
+
+	createEffect(() => {
+		itemCount();
+		setIndex(0);
+	});
+
+	createEffect(() => {
+		scrollTarget?.scrollTo({ x: 0, y: index() * ROW_STRIDE });
+	});
+
+	return {
+		index,
+		goTo: (next: number) => setIndex(clamp(next)),
+		moveBy: (delta: number) => setIndex((current) => clamp(current + delta)),
+		bindScrollTarget: (element: ScrollBoxRenderable | null | undefined) => {
+			scrollTarget = element ?? undefined;
+		},
+	};
 }
 
 function Header(props: { title: string; searchQuery: string }) {
@@ -328,7 +316,7 @@ function ColumnLabels() {
 			>
 				Project ↑
 			</text>
-			<For each={METRIC_COLUMNS}>
+			<For each={PROJECT_METRICS}>
 				{(column) => (
 					<text
 						fg={theme.textMuted}
@@ -344,21 +332,15 @@ function ColumnLabels() {
 	);
 }
 
-function Divider() {
-	return <box height={1} backgroundColor={theme.border} flexShrink={0} />;
-}
-
 function Footer(props: {
-	count: number;
+	visibleCount: number;
 	totalCount: number;
 	searchQuery: string;
 }) {
-	const label = () => {
-		if (props.searchQuery) {
-			return `${props.count}/${props.totalCount} matching`;
-		}
-		return `${props.count} project${props.count === 1 ? "" : "s"}`;
-	};
+	const label = () =>
+		props.searchQuery
+			? `${props.visibleCount}/${props.totalCount} matching`
+			: `${props.visibleCount} project${props.visibleCount === 1 ? "" : "s"}`;
 
 	return (
 		<box flexDirection="row" height={1} marginTop={1} flexShrink={0}>
@@ -370,20 +352,20 @@ function Footer(props: {
 	);
 }
 
-interface RowProps {
+function ProjectRow(props: {
 	project: Project;
 	accent: string;
 	selected: boolean;
-}
+}) {
+	const nameColor = () =>
+		props.selected ? theme.selectedAccent : theme.textBright;
 
-function Row(props: RowProps) {
 	return (
 		<box
 			flexDirection="row"
 			height={ROW_HEIGHT}
 			flexShrink={0}
 			backgroundColor={props.selected ? theme.selectedBg : theme.bg}
-			alignItems="stretch"
 		>
 			<box
 				backgroundColor={props.accent}
@@ -400,32 +382,41 @@ function Row(props: RowProps) {
 			<box flexDirection="column" flexGrow={1} justifyContent="center">
 				<box flexDirection="row" height={1}>
 					<text
-						fg={props.selected ? theme.selectedAccent : theme.textBright}
+						fg={nameColor()}
 						attributes={TextAttributes.BOLD}
 						flexGrow={1}
 						flexShrink={1}
 					>
 						{props.project.name}
 					</text>
-					<MetricValue metric={props.project.events} width={14} />
-					<MetricValue metric={props.project.errors} width={12} />
-					<MetricValue metric={props.project.users} width={14} />
+					<For each={PROJECT_METRICS}>
+						{(column) => (
+							<MetricCell
+								metric={props.project[column.key]}
+								width={column.width}
+							/>
+						)}
+					</For>
 				</box>
-
 				<box flexDirection="row" height={1}>
 					<text fg={theme.textDim} flexGrow={1} flexShrink={1}>
 						{props.project.slug} {VISIBILITY_GLYPH[props.project.visibility]}
 					</text>
-					<MetricTrend trend={props.project.events.trend} width={14} />
-					<MetricTrend trend={props.project.errors.trend} width={12} />
-					<MetricTrend trend={props.project.users.trend} width={14} />
+					<For each={PROJECT_METRICS}>
+						{(column) => (
+							<TrendCell
+								trend={props.project[column.key].trend}
+								width={column.width}
+							/>
+						)}
+					</For>
 				</box>
 			</box>
 		</box>
 	);
 }
 
-function MetricValue(props: { metric: Metric; width: number }) {
+function MetricCell(props: { metric: Metric; width: number }) {
 	return (
 		<text
 			width={props.width}
@@ -437,11 +428,11 @@ function MetricValue(props: { metric: Metric; width: number }) {
 	);
 }
 
-function MetricTrend(props: { trend: Trend; width: number }) {
-	const info = () => formatTrend(props.trend);
+function TrendCell(props: { trend: Trend; width: number }) {
+	const formatted = createMemo(() => formatTrend(props.trend));
 	return (
-		<text width={props.width} flexShrink={0} fg={info().color}>
-			{padLeft(info().text, props.width)}
+		<text width={props.width} flexShrink={0} fg={formatted().color}>
+			{padLeft(formatted().text, props.width)}
 		</text>
 	);
 }
