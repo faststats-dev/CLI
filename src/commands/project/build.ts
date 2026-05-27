@@ -1,17 +1,15 @@
 import { Effect, Option } from "effect";
 import { Command } from "effect/unstable/cli";
-import { listProjectEntries } from "../../project-slugs.ts";
+import { listProjectSlugs } from "../../project-slugs.ts";
 import { projectCreateCommand } from "./create.ts";
 import { projectListCommand } from "./list.ts";
 import { makeSlugScopedCommand } from "./slug-scope.ts";
 
 export const buildProjectCommand = Effect.gen(function* () {
-	const entriesOption = yield* Effect.option(listProjectEntries);
-	const entries = Option.getOrElse(entriesOption, () => []);
+	const slugsOption = yield* Effect.option(listProjectSlugs);
+	const slugs = Option.getOrElse(slugsOption, () => []);
 
-	const slugCommands = entries.map(({ slug, isWeb }) =>
-		makeSlugScopedCommand(slug, isWeb),
-	);
+	const slugCommands = slugs.map((slug) => makeSlugScopedCommand(slug));
 
 	return Command.make("project", {}).pipe(
 		Command.withDescription("Manage FastStats projects"),

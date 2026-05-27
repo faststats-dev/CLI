@@ -29,12 +29,12 @@ const makeShowCommand = (slug: string) =>
 		}),
 	).pipe(Command.withDescription("Show project details"));
 
-export const makeSlugScopedCommand = (slug: string, isWeb: boolean) =>
+export const makeSlugScopedCommand = (slug: string) =>
 	Command.make(slug, {}).pipe(
 		Command.withDescription(`Manage project ${slug}`),
 		Command.withSubcommands([
 			makeShowCommand(slug),
 			makeNetworkCommand(slug),
-			...(isWeb ? [makeHostnamesCommand(slug)] : []),
+			makeHostnamesCommand(slug),
 		]),
 	);

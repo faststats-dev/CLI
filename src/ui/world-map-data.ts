@@ -37,11 +37,11 @@ const EXCLUDED_IDS = new Set<string>([
 ]);
 
 /** Latitude window used by the equirectangular projection. */
-export const PROJECTION_LAT_MAX = 85;
-export const PROJECTION_LAT_MIN = -58;
+const PROJECTION_LAT_MAX = 85;
+const PROJECTION_LAT_MIN = -58;
 const PROJECTION_LAT_RANGE = PROJECTION_LAT_MAX - PROJECTION_LAT_MIN;
 
-export const COUNTRIES: ReadonlyArray<CountryFeature> = featureCollection.features
+const COUNTRIES: ReadonlyArray<CountryFeature> = featureCollection.features
 	.map((f, index) => ({
 		id: String(f.id ?? index),
 		name: f.properties?.name ?? "",

@@ -7,6 +7,7 @@ import type { ChartQueryConfigLite } from "../data/chart-data.ts";
 import {
 	EMPTY_METRIC,
 	metricFromChange,
+	type Metric,
 	type Project,
 } from "../data/project.ts";
 import {
@@ -35,24 +36,9 @@ export const projectsCommand = Command.make("projects", {}, () =>
 				slug: `/${item.slug}`,
 				visibility: item.private ? "private" : "public",
 				preferredChartColors: item.preferredChartColors,
-				events: stats
-					? metricFromChange(
-							toFiniteNumber(stats.events),
-							toFiniteNumber(stats.eventsChange),
-						)
-					: EMPTY_METRIC,
-				errors: stats
-					? metricFromChange(
-							toFiniteNumber(stats.errors),
-							toFiniteNumber(stats.errorsChange),
-						)
-					: EMPTY_METRIC,
-				users: stats
-					? metricFromChange(
-							toFiniteNumber(stats.users),
-							toFiniteNumber(stats.usersChange),
-						)
-					: EMPTY_METRIC,
+				events: metricFromStats(stats, "events"),
+				errors: metricFromStats(stats, "errors"),
+				users: metricFromStats(stats, "users"),
 			};
 		});
 
@@ -140,6 +126,27 @@ export const projectsCommand = Command.make("projects", {}, () =>
 		}
 	}),
 ).pipe(Command.withDescription("Browse projects in the terminal UI"));
+
+type DashboardStats = {
+	readonly events?: number | string | "NaN" | "Infinity" | "-Infinity" | null;
+	readonly eventsChange?: number | string | "NaN" | "Infinity" | "-Infinity" | null;
+	readonly errors?: number | string | "NaN" | "Infinity" | "-Infinity" | null;
+	readonly errorsChange?: number | string | "NaN" | "Infinity" | "-Infinity" | null;
+	readonly users?: number | string | "NaN" | "Infinity" | "-Infinity" | null;
+	readonly usersChange?: number | string | "NaN" | "Infinity" | "-Infinity" | null;
+};
+
+function metricFromStats(
+	stats: DashboardStats | undefined,
+	field: "events" | "errors" | "users",
+): Metric {
+	if (!stats) return EMPTY_METRIC;
+	const changeField = `${field}Change` as const;
+	return metricFromChange(
+		toFiniteNumber(stats[field]),
+		toFiniteNumber(stats[changeField]),
+	);
+}
 
 function toGridPosition(
 	pos:

@@ -1,7 +1,9 @@
 import { Console, Effect, Option } from "effect";
 import { Command, Flag, Prompt } from "effect/unstable/cli";
 import { FastStatsApi } from "../../api-client.ts";
-import { unwrapOption } from "../../cli/unwrap-option.ts";
+
+const requireFlag = <A>(value: A | Option.Option<A>): A =>
+	Option.isOption(value) ? Option.getOrThrow(value) : value;
 
 export const projectCreateCommand = Command.make(
 	"create",
@@ -38,8 +40,8 @@ export const projectCreateCommand = Command.make(
 
 			const project = yield* api.ProjectsCreateProject({
 				payload: {
-					name: unwrapOption(name),
-					private: unwrapOption(isPrivate),
+					name: requireFlag(name),
+					private: requireFlag(isPrivate),
 					allowedHostnames,
 				},
 			});

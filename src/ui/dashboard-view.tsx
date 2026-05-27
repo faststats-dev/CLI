@@ -1,6 +1,4 @@
 import {
-    type CliRenderer,
-    createCliRenderer,
     type ScrollBoxRenderable,
     TextAttributes,
 } from "@opentui/core";
@@ -21,6 +19,7 @@ import {
 } from "../data/chart-data.ts";
 import { ListChart } from "./list-chart.tsx";
 import { MapChart } from "./map-chart.tsx";
+import { createOpenTuiRenderer, waitForDestroy } from "./open-tui.ts";
 import { BarChart, LineAreaChart, PieChart } from "./series-charts.tsx";
 import { chartColor, theme } from "./theme.ts";
 import { WidgetChart } from "./widget-chart.tsx";
@@ -93,16 +92,9 @@ export type RunDashboardViewResult = { kind: "closed" };
 export async function runDashboardView(
 	options: RunDashboardViewOptions,
 ): Promise<RunDashboardViewResult> {
-	const renderer: CliRenderer = await createCliRenderer({
-		exitOnCtrlC: false,
-		targetFps: 60,
-	});
-
+	const renderer = await createOpenTuiRenderer();
 	await render(() => <DashboardApp options={options} />, renderer);
-
-	return new Promise<RunDashboardViewResult>((resolve) => {
-		renderer.once("destroy", () => resolve({ kind: "closed" }));
-	});
+	return waitForDestroy(renderer, { kind: "closed" });
 }
 
 interface DashboardAppProps {
@@ -400,7 +392,6 @@ function ChartBox(props: {
 	);
 	const innerWidth = createMemo(() => Math.max(0, width() - 4));
 	const innerHeight = createMemo(() => Math.max(0, height() - 2));
-	const glyph = () => CHART_GLYPH[props.chart.chartType] ?? "▢";
 
 	const mapHighlights = createMemo(() => {
 		if (props.chart.chartType !== "map" || !isSeriesResult(props.chart.data)) {
@@ -431,88 +422,80 @@ function ChartBox(props: {
 			titleAlignment="left"
 			paddingX={1}
 		>
-			<Show when={props.chart.chartType === "widget"}>
-				<WidgetChart
-					data={props.chart.data}
-					queryConfig={props.chart.queryConfig}
-					accent={props.accent}
-					innerWidth={innerWidth()}
-					innerHeight={innerHeight()}
-				/>
-			</Show>
-			<Show when={props.chart.chartType === "list"}>
-				<ListChart
-					data={props.chart.data}
-					queryConfig={props.chart.queryConfig}
-					accent={props.accent}
-					innerWidth={innerWidth()}
-					innerHeight={innerHeight()}
-				/>
-			</Show>
-			<Show when={props.chart.chartType === "bar"}>
+			<ChartContent
+				chart={props.chart}
+				accent={props.accent}
+				innerWidth={innerWidth()}
+				innerHeight={innerHeight()}
+				preferredChartColors={props.preferredChartColors}
+				mapHighlights={mapHighlights()}
+			/>
+		</box>
+	);
+}
+
+function ChartContent(props: {
+	chart: ChartLite;
+	accent: string;
+	innerWidth: number;
+	innerHeight: number;
+	preferredChartColors: ReadonlyArray<string> | null;
+	mapHighlights: ReturnType<typeof seriesToMapHighlights>;
+}) {
+	const common = {
+		data: props.chart.data,
+		queryConfig: props.chart.queryConfig,
+		accent: props.accent,
+		innerWidth: props.innerWidth,
+		innerHeight: props.innerHeight,
+	};
+
+	switch (props.chart.chartType) {
+		case "widget":
+			return <WidgetChart {...common} />;
+		case "list":
+			return <ListChart {...common} />;
+		case "bar":
+			return (
 				<BarChart
-					data={props.chart.data}
-					queryConfig={props.chart.queryConfig}
+					{...common}
 					flowMeta={props.chart.flowMeta}
-					accent={props.accent}
 					preferredChartColors={props.preferredChartColors}
-					innerWidth={innerWidth()}
-					innerHeight={innerHeight()}
 				/>
-			</Show>
-			<Show when={props.chart.chartType === "pie"}>
-				<PieChart
-					data={props.chart.data}
-					queryConfig={props.chart.queryConfig}
-					accent={props.accent}
-					preferredChartColors={props.preferredChartColors}
-					innerWidth={innerWidth()}
-					innerHeight={innerHeight()}
-				/>
-			</Show>
-			<Show when={props.chart.chartType === "line"}>
+			);
+		case "pie":
+			return (
+				<PieChart {...common} preferredChartColors={props.preferredChartColors} />
+			);
+		case "line":
+			return (
 				<LineAreaChart
+					{...common}
 					chartType="line"
-					data={props.chart.data}
-					queryConfig={props.chart.queryConfig}
 					flowMeta={props.chart.flowMeta}
-					accent={props.accent}
 					preferredChartColors={props.preferredChartColors}
-					innerWidth={innerWidth()}
-					innerHeight={innerHeight()}
 				/>
-			</Show>
-			<Show when={props.chart.chartType === "area"}>
+			);
+		case "area":
+			return (
 				<LineAreaChart
+					{...common}
 					chartType="area"
-					data={props.chart.data}
-					queryConfig={props.chart.queryConfig}
 					flowMeta={props.chart.flowMeta}
-					accent={props.accent}
 					preferredChartColors={props.preferredChartColors}
-					innerWidth={innerWidth()}
-					innerHeight={innerHeight()}
 				/>
-			</Show>
-			<Show when={props.chart.chartType === "map"}>
+			);
+		case "map":
+			return (
 				<MapChart
 					accent={props.accent}
-					innerWidth={innerWidth()}
-					innerHeight={innerHeight()}
-					highlights={mapHighlights()}
+					innerWidth={props.innerWidth}
+					innerHeight={props.innerHeight}
+					highlights={props.mapHighlights}
 				/>
-			</Show>
-			<Show
-				when={
-					props.chart.chartType !== "widget" &&
-					props.chart.chartType !== "map" &&
-					props.chart.chartType !== "list" &&
-					props.chart.chartType !== "bar" &&
-					props.chart.chartType !== "pie" &&
-					props.chart.chartType !== "line" &&
-					props.chart.chartType !== "area"
-				}
-			>
+			);
+		default:
+			return (
 				<box
 					flexDirection="column"
 					width="100%"
@@ -521,12 +504,11 @@ function ChartBox(props: {
 					alignItems="center"
 				>
 					<text fg={props.accent} attributes={TextAttributes.BOLD}>
-						{glyph()} {props.chart.chartType}
+						{CHART_GLYPH[props.chart.chartType] ?? "▢"} {props.chart.chartType}
 					</text>
 				</box>
-			</Show>
-		</box>
-	);
+			);
+	}
 }
 
 function EmptyDashboard() {

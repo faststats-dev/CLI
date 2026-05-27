@@ -1,13 +1,6 @@
 import { type FrameBufferRenderable, RGBA } from "@opentui/core";
+import { BRAILLE_BASE, BRAILLE_DOT_BITS } from "./braille.ts";
 import { theme } from "./theme.ts";
-
-const BRAILLE_BASE = 0x2800;
-const BRAILLE_DOT: ReadonlyArray<ReadonlyArray<number>> = [
-	[0x01, 0x08],
-	[0x02, 0x10],
-	[0x04, 0x20],
-	[0x40, 0x80],
-];
 
 const LAYER_GRID = 0;
 const LAYER_FILL = 1;
@@ -312,7 +305,7 @@ function renderPixelBufferToFrameBuffer(
 					if (px >= buf.width || py >= buf.height) continue;
 					const pixel = buf.pixels[py]?.[px] ?? null;
 					if (!pixel) continue;
-					const bit = BRAILLE_DOT[dy]![dx]!;
+					const bit = BRAILLE_DOT_BITS[dy]![dx]!;
 					dotsByLayer.set(pixel.layer, (dotsByLayer.get(pixel.layer) ?? 0) | bit);
 					if (!colorByLayer.has(pixel.layer)) {
 						colorByLayer.set(pixel.layer, new Map());

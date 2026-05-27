@@ -1,6 +1,11 @@
 import type { MetricsLoadDashboardData200 } from "../api.ts";
 import { getChartColor, resolveChartPalette } from "./chart-color-palette.ts";
-import type { MapChartHighlight } from "../ui/map-chart.tsx";
+import { theme } from "../ui/theme.ts";
+
+export interface MapChartHighlight {
+	readonly country: string;
+	readonly color: string;
+}
 
 export type ChartData = MetricsLoadDashboardData200["charts"][string];
 
@@ -192,16 +197,23 @@ export function formatWidgetTrend(trend: number): {
 	readonly prefix: string;
 } {
 	if (!Number.isFinite(trend) || trend === 0) {
-		return { text: "0%", color: "#a1a1a1", prefix: "" };
+		return { text: "0%", color: theme.textMuted, prefix: "" };
 	}
 	if (trend > 0) {
 		const pct =
 			trend >= 10 ? trend.toFixed(0) : percentFormatter.format(trend);
-		return { text: `${pct}%`, color: "#3cbd4b", prefix: "+" };
+		return { text: `${pct}%`, color: theme.success, prefix: "+" };
 	}
 	const abs = Math.abs(trend);
 	const pct = abs >= 10 ? abs.toFixed(0) : percentFormatter.format(abs);
-	return { text: `${pct}%`, color: "#ff6467", prefix: "" };
+	return { text: `${pct}%`, color: theme.danger, prefix: "" };
+}
+
+export function resolveMetricLabel(
+	queryConfig: ChartQueryConfigLite | null | undefined,
+	fallback = "Value",
+): string {
+	return resolveMetricKey(queryConfig) ?? fallback;
 }
 
 export function resolveMetricKey(
@@ -293,11 +305,12 @@ function blendWithBackground(hex: string, alpha: number): string {
 	const r = Number.parseInt(hex.slice(1, 3), 16);
 	const g = Number.parseInt(hex.slice(3, 5), 16);
 	const b = Number.parseInt(hex.slice(5, 7), 16);
-	const bgR = 23;
-	const bgG = 23;
-	const bgB = 23;
-	const mix = (c: number, bg: number) =>
-		Math.round(c * alpha + bg * (1 - alpha));
+	const bg = theme.surface;
+	const bgR = Number.parseInt(bg.slice(1, 3), 16);
+	const bgG = Number.parseInt(bg.slice(3, 5), 16);
+	const bgB = Number.parseInt(bg.slice(5, 7), 16);
+	const mix = (c: number, bgC: number) =>
+		Math.round(c * alpha + bgC * (1 - alpha));
 	const toHex = (n: number) => n.toString(16).padStart(2, "0");
 	return `#${toHex(mix(r, bgR))}${toHex(mix(g, bgG))}${toHex(mix(b, bgB))}`;
 }

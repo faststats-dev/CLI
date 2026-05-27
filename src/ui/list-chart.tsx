@@ -4,43 +4,12 @@ import {
 	parseSeriesEntries,
 	resolveListTabIndex,
 	resolveMetricKey,
+	resolveMetricLabel,
 	resolveSeriesRows,
 	truncateLabel,
-	type ChartData,
-	type ChartQueryConfigLite,
 } from "../data/chart-data.ts";
+import { ChartEmptyState, type SeriesChartProps } from "./chart-shared.tsx";
 import { theme } from "./theme.ts";
-
-export interface SeriesChartProps {
-	readonly data: ChartData | null;
-	readonly queryConfig: ChartQueryConfigLite | null;
-	readonly accent: string;
-	readonly innerWidth: number;
-	readonly innerHeight: number;
-}
-
-export function ChartEmptyState(props: { readonly message?: string }) {
-	return (
-		<box
-			flexDirection="column"
-			width="100%"
-			height="100%"
-			justifyContent="center"
-			alignItems="center"
-		>
-			<text fg={theme.textMuted}>{props.message ?? "No data"}</text>
-		</box>
-	);
-}
-
-function resolveListMetricLabel(
-	queryConfig: ChartQueryConfigLite | null | undefined,
-): string {
-	const primary = queryConfig?.primaryMetric?.field;
-	if (primary) return primary;
-	const first = queryConfig?.metrics?.[0]?.field;
-	return first ?? "Value";
-}
 
 export function ListChart(props: SeriesChartProps) {
 	const rows = createMemo(() => {
@@ -62,7 +31,7 @@ export function ListChart(props: SeriesChartProps) {
 		);
 		return Math.max(5, ...widths, 5);
 	});
-	const metricLabel = () => resolveListMetricLabel(props.queryConfig);
+	const metricLabel = () => resolveMetricLabel(props.queryConfig);
 
 	return (
 		<Show

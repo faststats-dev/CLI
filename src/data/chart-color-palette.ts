@@ -16,57 +16,6 @@ export const DEFAULT_CHART_COLORS = [
 	"#9A3412",
 ];
 
-export const CHART_COLOR_PRESETS = [
-	{
-		label: "Amber Pulse",
-		colors: ["#FDBA74", "#F97316", "#EA580C", "#C2410C", "#9A3412"],
-	},
-	{
-		label: "Ocean Data",
-		colors: ["#2563EB", "#06B6D4", "#0EA5E9", "#38BDF8", "#7DD3FC"],
-	},
-	{
-		label: "Forest Signal",
-		colors: ["#15803D", "#22C55E", "#84CC16", "#4ADE80", "#BEF264"],
-	},
-	{
-		label: "Berry Contrast",
-		colors: ["#7C3AED", "#EC4899", "#F43F5E", "#A78BFA", "#FDA4AF"],
-	},
-	{
-		label: "Slate Mono",
-		colors: ["#1E293B", "#334155", "#475569", "#64748B", "#94A3B8"],
-	},
-	{
-		label: "Sunset Drift",
-		colors: ["#DC2626", "#EA580C", "#F59E0B", "#FBBF24", "#FDE68A"],
-	},
-	{
-		label: "Neon Mint",
-		colors: ["#059669", "#10B981", "#34D399", "#6EE7B7", "#A7F3D0"],
-	},
-	{
-		label: "Electric Indigo",
-		colors: ["#4338CA", "#6366F1", "#818CF8", "#A5B4FC", "#C7D2FE"],
-	},
-	{
-		label: "Rose Quartz",
-		colors: ["#BE123C", "#E11D48", "#FB7185", "#FDA4AF", "#FFE4E6"],
-	},
-	{
-		label: "Copper Flame",
-		colors: ["#92400E", "#B45309", "#D97706", "#F59E0B", "#FCD34D"],
-	},
-	{
-		label: "Arctic Teal",
-		colors: ["#115E59", "#0D9488", "#14B8A6", "#5EEAD4", "#99F6E4"],
-	},
-	{
-		label: "Warm Neutral",
-		colors: ["#44403C", "#78716C", "#A8A29E", "#D6D3D1", "#E7E5E4"],
-	},
-] as const;
-
 function clamp(value: number, min: number, max: number) {
 	return Math.min(max, Math.max(min, value));
 }

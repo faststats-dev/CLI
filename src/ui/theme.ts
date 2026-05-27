@@ -53,8 +53,6 @@ export const theme = {
 	selectedAccent: tokens.primary,
 	success: tokens.success,
 	danger: tokens.destructive,
-	warning: tokens.chart1,
-	hint: tokens.ring,
 	chartPalette: [
 		tokens.chart1,
 		tokens.chart2,

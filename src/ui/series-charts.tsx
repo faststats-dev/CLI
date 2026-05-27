@@ -12,7 +12,7 @@ import {
 	renderCategoricalBarRows,
 	renderVerticalBarLines,
 } from "./chart-text-render.ts";
-import { ChartEmptyState, type SeriesChartProps } from "./list-chart.tsx";
+import { ChartEmptyState, type SeriesChartProps } from "./chart-shared.tsx";
 import { LineAreaChartView } from "./line-area-chart.tsx";
 import { resolveLineAreaSeriesStyle } from "./line-area-chart-renderer.ts";
 import { theme } from "./theme.ts";

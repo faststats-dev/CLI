@@ -1,6 +1,4 @@
 import {
-    type CliRenderer,
-    createCliRenderer,
     type KeyEvent,
     type ScrollBoxRenderable,
     TextAttributes,
@@ -14,8 +12,9 @@ import {
     Show,
     type Accessor,
 } from "solid-js";
-import { formatWidgetValue } from "../data/chart-data.ts";
+import { formatWidgetTrend, formatWidgetValue } from "../data/chart-data.ts";
 import type { Metric, Project, Trend } from "../data/project.ts";
+import { createOpenTuiRenderer, waitForDestroy } from "./open-tui.ts";
 import { chartColor, theme } from "./theme.ts";
 
 const PROJECT_METRICS = [
@@ -44,11 +43,11 @@ const formatTrend = (trend: Trend): { text: string; color: string } => {
 	if (trend.direction === "flat" || trend.percent === 0) {
 		return { text: "—", color: theme.textMuted };
 	}
+	const change =
+		trend.direction === "up" ? trend.percent : -trend.percent;
+	const formatted = formatWidgetTrend(change);
 	const arrow = trend.direction === "up" ? "↑" : "↓";
-	return {
-		text: `${arrow} ${trend.percent >= 10 ? trend.percent.toFixed(0) : trend.percent.toFixed(1)}%`,
-		color: trend.direction === "up" ? theme.success : theme.danger,
-	};
+	return { text: `${arrow} ${formatted.text}`, color: formatted.color };
 };
 
 const scoreProject = (project: Project, query: string): number => {
@@ -107,11 +106,7 @@ export async function runProjectsTable(
 	options: RunProjectsTableOptions,
 ): Promise<RunProjectsTableResult> {
 	let outcome: RunProjectsTableResult = { kind: "cancelled" };
-
-	const renderer: CliRenderer = await createCliRenderer({
-		exitOnCtrlC: false,
-		targetFps: 60,
-	});
+	const renderer = await createOpenTuiRenderer();
 
 	await render(
 		() => (
@@ -126,9 +121,7 @@ export async function runProjectsTable(
 		renderer,
 	);
 
-	return new Promise<RunProjectsTableResult>((resolve) => {
-		renderer.once("destroy", () => resolve(outcome));
-	});
+	return waitForDestroy(renderer, outcome);
 }
 
 interface ProjectsAppProps {

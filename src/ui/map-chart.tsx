@@ -1,23 +1,10 @@
 import { type BoxRenderable, FrameBufferRenderable, RGBA } from "@opentui/core";
 import { useRenderer } from "@opentui/solid";
 import { createEffect, createMemo, createSignal, onCleanup } from "solid-js";
+import type { MapChartHighlight } from "../data/chart-data.ts";
+import { BRAILLE_BASE, BRAILLE_DOT_BITS } from "./braille.ts";
 import { theme } from "./theme.ts";
 import { findCountryIndex, rasterizeWorld } from "./world-map-data.ts";
-
-const BRAILLE_BASE = 0x2800;
-const BRAILLE_DOT_BITS: ReadonlyArray<ReadonlyArray<number>> = [
-	[0x01, 0x08],
-	[0x02, 0x10],
-	[0x04, 0x20],
-	[0x40, 0x80],
-];
-
-export interface MapChartHighlight {
-	/** ISO alpha-2/alpha-3, numeric ISO code (e.g. `"840"`), or country name. */
-	readonly country: string;
-	/** Hex color to fill the country with. */
-	readonly color: string;
-}
 
 export interface MapChartProps {
 	readonly accent: string;

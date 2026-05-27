@@ -1,0 +1,8 @@
+export const BRAILLE_BASE = 0x2800;
+
+export const BRAILLE_DOT_BITS: ReadonlyArray<ReadonlyArray<number>> = [
+	[0x01, 0x08],
+	[0x02, 0x10],
+	[0x04, 0x20],
+	[0x40, 0x80],
+];
