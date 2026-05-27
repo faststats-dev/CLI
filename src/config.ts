@@ -19,6 +19,17 @@ export interface FastStatsCredentials extends FastStatsConfig {
 	readonly accessToken?: string;
 }
 
+export type AuthMethod = "api-key" | "access-token";
+export type AuthSource = "environment" | "os-secrets";
+
+export type AuthStatus =
+	| {
+			readonly authenticated: true;
+			readonly method: AuthMethod;
+			readonly source: AuthSource;
+	  }
+	| { readonly authenticated: false };
+
 export const DEFAULT_API_URL = "http://localhost:4000";
 export const DEFAULT_APP_URL = "http://localhost:3000";
 
@@ -72,6 +83,43 @@ export const loadConfig = Effect.gen(function* () {
 	const content = yield* fs.readFileString(CONFIG_PATH);
 	const parsed = JSON.parse(content) as FastStatsConfig;
 	return parsed;
+});
+
+export const loadAuthStatus = Effect.gen(function* () {
+	if (process.env.FASTSTATS_API_KEY) {
+		return {
+			authenticated: true,
+			method: "api-key",
+			source: "environment",
+		} satisfies AuthStatus;
+	}
+	if (process.env.FASTSTATS_ACCESS_TOKEN) {
+		return {
+			authenticated: true,
+			method: "access-token",
+			source: "environment",
+		} satisfies AuthStatus;
+	}
+
+	const apiKey = yield* getSecret(API_KEY_SECRET);
+	if (apiKey != null) {
+		return {
+			authenticated: true,
+			method: "api-key",
+			source: "os-secrets",
+		} satisfies AuthStatus;
+	}
+
+	const accessToken = yield* getSecret(ACCESS_TOKEN_SECRET);
+	if (accessToken != null) {
+		return {
+			authenticated: true,
+			method: "access-token",
+			source: "os-secrets",
+		} satisfies AuthStatus;
+	}
+
+	return { authenticated: false } satisfies AuthStatus;
 });
 
 export const loadCredentials = Effect.gen(function* () {

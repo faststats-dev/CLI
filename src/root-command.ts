@@ -5,6 +5,7 @@ import { configCommand } from "./commands/config.ts";
 import { loginCommand } from "./commands/login.ts";
 import { logoutCommand } from "./commands/logout.ts";
 import { projectsCommand } from "./commands/projects.ts";
+import { statusCommand } from "./commands/status.ts";
 
 export const buildRootCommand = Effect.gen(function* () {
 	const projectCommand = yield* buildProjectCommand;
@@ -17,6 +18,7 @@ export const buildRootCommand = Effect.gen(function* () {
 			configCommand,
 			loginCommand,
 			logoutCommand,
+			statusCommand,
 		]),
 	);
 });
