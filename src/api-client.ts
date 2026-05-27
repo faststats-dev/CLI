@@ -2,26 +2,35 @@ import { Data, Effect } from "effect";
 import * as HttpClient from "effect/unstable/http/HttpClient";
 import * as HttpClientRequest from "effect/unstable/http/HttpClientRequest";
 import * as Api from "./api.ts";
-import { loadConfig, resolveCredentials } from "./config.ts";
+import { loadCredentials, resolveCredentials } from "./config.ts";
 
 export class MissingApiKeyError extends Data.TaggedError("MissingApiKeyError")<{
 	readonly variable: string;
 }> {}
 
 export const FastStatsApi = Effect.gen(function* () {
-	const fileConfig = yield* loadConfig;
-	const { apiKey, apiUrl } = resolveCredentials(fileConfig);
+	const credentials = yield* loadCredentials;
+	const { accessToken, apiKey, apiUrl } = resolveCredentials(credentials);
 
-	if (!apiKey) {
+	if (!apiKey && !accessToken) {
 		return yield* new MissingApiKeyError({
-			variable: "FASTSTATS_API_KEY or ~/.config/faststats/config.json",
+			variable:
+				"FASTSTATS_API_KEY, FASTSTATS_ACCESS_TOKEN, or OS secrets",
 		});
 	}
 
 	const httpClient = yield* HttpClient.HttpClient;
 	const configured = httpClient.pipe(
 		HttpClient.mapRequest(HttpClientRequest.prependUrl(apiUrl)),
-		HttpClient.mapRequest(HttpClientRequest.setHeader("x-api-key", apiKey)),
+		HttpClient.mapRequest((request) =>
+			apiKey
+				? HttpClientRequest.setHeader(request, "x-api-key", apiKey)
+				: HttpClientRequest.setHeader(
+						request,
+						"Authorization",
+						`Bearer ${accessToken}`,
+					),
+		),
 	);
 
 	return Api.make(configured);
