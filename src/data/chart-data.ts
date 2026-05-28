@@ -7,13 +7,29 @@ export interface MapChartHighlight {
 	readonly color: string;
 }
 
-export type ChartData = MetricsLoadDashboardData200["charts"][string];
+interface WidgetMetric {
+	readonly value?: number | string;
+	readonly trend?: number | string;
+}
+
+export type WidgetChartData = ReadonlyArray<ReadonlyArray<WidgetMetric>>;
+
+export type SeriesRows = ReadonlyArray<{
+	readonly name: string;
+	readonly [x: string]: string | number;
+}>;
+
+type TabsChartData = {
+	readonly tabs:
+		| ReadonlyArray<SeriesRows>
+		| Record<string, SeriesRows>;
+};
+
+export type ChartData = SeriesRows | TabsChartData | WidgetChartData;
 
 export type ChartFlowMetaLite = NonNullable<
 	MetricsLoadDashboardData200["flowMeta"]
 >[string];
-
-export type WidgetChartData = Extract<ChartData, { readonly type: "widget" }>;
 
 export interface ChartQueryConfigLite {
 	readonly primaryMetric?: {
@@ -38,17 +54,6 @@ export interface SeriesEntry {
 	readonly value: number;
 }
 
-export type SeriesRows = ReadonlyArray<{
-	readonly name: string;
-	readonly [x: string]: string | number;
-}>;
-
-export type TabsChartData = {
-	readonly tabs:
-		| ReadonlyArray<SeriesRows>
-		| Record<string, SeriesRows>;
-};
-
 const percentFormatter = new Intl.NumberFormat(undefined, {
 	maximumFractionDigits: 1,
 });
@@ -57,20 +62,23 @@ export function isWidgetResult(
 	data: ChartData | null | undefined,
 ): data is WidgetChartData {
 	return (
-		data != null &&
-		typeof data === "object" &&
-		"type" in data &&
-		data.type === "widget"
+		Array.isArray(data) &&
+		data.length > 0 &&
+		Array.isArray(data[0])
 	);
 }
 
 export function isSeriesResult(
 	data: ChartData | null | undefined,
 ): data is SeriesRows {
-	return Array.isArray(data);
+	return (
+		Array.isArray(data) &&
+		(data.length === 0 ||
+			(typeof data[0] === "object" && data[0] != null && "name" in data[0]))
+	);
 }
 
-export function isTabsResult(
+function isTabsResult(
 	data: ChartData | null | undefined,
 ): data is TabsChartData {
 	return (

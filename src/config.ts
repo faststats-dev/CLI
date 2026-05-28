@@ -5,7 +5,7 @@ import { Data, Effect } from "effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Path from "effect/Path";
 
-export class ConfigError extends Data.TaggedError("ConfigError")<{
+class ConfigError extends Data.TaggedError("ConfigError")<{
 	readonly message: string;
 }> {}
 

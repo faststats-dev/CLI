@@ -25,7 +25,7 @@ const featureCollection = feature(
 	countriesObject,
 ) as FeatureCollection<Polygon | MultiPolygon, CountryProperties>;
 
-export interface CountryFeature {
+interface CountryFeature {
 	readonly id: string;
 	readonly name: string;
 	readonly geometry: Polygon | MultiPolygon;

@@ -1,11 +1,18 @@
 import { type CliRenderer, createCliRenderer } from "@opentui/core";
 
-export async function createOpenTuiRenderer(): Promise<CliRenderer> {
-	return createCliRenderer({ exitOnCtrlC: false, targetFps: 60 });
-}
 
-export function waitForDestroy<T>(renderer: CliRenderer, value: T): Promise<T> {
-	return new Promise((resolve) => {
-		renderer.once("destroy", () => resolve(value));
+export async function runOpenTui<T>(
+	mount: (ctx: {
+		renderer: CliRenderer;
+		close: (result: T) => void;
+	}) => void | Promise<void>,
+): Promise<T> {
+	const renderer = await createCliRenderer({ exitOnCtrlC: false, targetFps: 60 });
+	return new Promise<T>((resolve) => {
+		const close = (result: T) => {
+			renderer.once("destroy", () => resolve(result));
+			renderer.destroy();
+		};
+		void Promise.resolve(mount({ renderer, close }));
 	});
 }

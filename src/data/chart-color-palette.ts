@@ -8,7 +8,7 @@ const SINGLE_COLOR_SATURATION_OFFSETS = [
 	0, 6, -6, 10, -10, 12, -12, 14, -14, 16,
 ];
 
-export const DEFAULT_CHART_COLORS = [
+const DEFAULT_CHART_COLORS = [
 	"#FDBA74",
 	"#F97316",
 	"#EA580C",
@@ -30,10 +30,6 @@ function normalizeHexColor(value: string): string | null {
 	}
 
 	return color.toUpperCase();
-}
-
-export function normalizeChartColor(value: string): string | null {
-	return normalizeHexColor(value);
 }
 
 function hexToHsl(hex: string): { h: number; s: number; l: number } {
@@ -148,7 +144,7 @@ function sanitizeInputColors(colors: readonly string[] | undefined): string[] {
 	return Array.from(unique);
 }
 
-export function buildChartPalette(
+function buildChartPalette(
 	inputColors: readonly string[] | undefined,
 	count: number,
 	fallbackColors: readonly string[] = DEFAULT_CHART_COLORS,
@@ -186,20 +182,6 @@ export function buildChartPalette(
 export function getChartColor(palette: string[], index: number): string {
 	if (!palette.length) return DEFAULT_CHART_COLORS[0]!;
 	return palette[index % palette.length]!;
-}
-
-export function sanitizeChartColors(
-	colors: readonly string[] | undefined,
-): string[] {
-	if (!colors?.length) return [DEFAULT_CHART_COLORS[0]!];
-
-	const sanitized: string[] = [];
-	for (const color of colors) {
-		const normalized = normalizeHexColor(color);
-		if (normalized) sanitized.push(normalized);
-	}
-
-	return sanitized.length > 0 ? sanitized : [DEFAULT_CHART_COLORS[0]!];
 }
 
 export function resolveChartPalette(

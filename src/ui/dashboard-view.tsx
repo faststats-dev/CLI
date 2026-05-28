@@ -2,13 +2,15 @@ import {
     type ScrollBoxRenderable,
     TextAttributes,
 } from "@opentui/core";
+import { render, useKeyboard, useTerminalDimensions } from "@opentui/solid";
 import {
-    render,
-    useKeyboard,
-    useRenderer,
-    useTerminalDimensions,
-} from "@opentui/solid";
-import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
+	createEffect,
+	createMemo,
+	createSignal,
+	For,
+	onCleanup,
+	Show,
+} from "solid-js";
 import {
     isSeriesResult,
     resolveMetricKey,
@@ -19,7 +21,7 @@ import {
 } from "../data/chart-data.ts";
 import { ListChart } from "./list-chart.tsx";
 import { MapChart } from "./map-chart.tsx";
-import { createOpenTuiRenderer, waitForDestroy } from "./open-tui.ts";
+import { runOpenTui } from "./open-tui.ts";
 import { BarChart, LineAreaChart, PieChart } from "./series-charts.tsx";
 import { chartColor, theme } from "./theme.ts";
 import { WidgetChart } from "./widget-chart.tsx";
@@ -84,7 +86,9 @@ export interface RunDashboardViewOptions {
 	readonly projectSlug: string;
 	readonly preferredChartColors: ReadonlyArray<string> | null;
 	readonly dashboards: ReadonlyArray<DashboardLite>;
-	readonly charts: ReadonlyArray<ChartLite>;
+	readonly loadDashboard: (
+		dashboardId: string,
+	) => Promise<ReadonlyArray<ChartLite>>;
 }
 
 export type RunDashboardViewResult = { kind: "closed" };
@@ -92,17 +96,20 @@ export type RunDashboardViewResult = { kind: "closed" };
 export async function runDashboardView(
 	options: RunDashboardViewOptions,
 ): Promise<RunDashboardViewResult> {
-	const renderer = await createOpenTuiRenderer();
-	await render(() => <DashboardApp options={options} />, renderer);
-	return waitForDestroy(renderer, { kind: "closed" });
+	return runOpenTui(({ renderer, close }) =>
+		render(
+			() => <DashboardApp options={options} onExit={() => close({ kind: "closed" })} />,
+			renderer,
+		),
+	);
 }
 
 interface DashboardAppProps {
 	options: RunDashboardViewOptions;
+	onExit: () => void;
 }
 
 function DashboardApp(props: DashboardAppProps) {
-	const renderer = useRenderer();
 	const dashboards = () => props.options.dashboards;
 	const dashboardCount = () => dashboards().length;
 
@@ -115,10 +122,40 @@ function DashboardApp(props: DashboardAppProps) {
 
 	const currentDashboard = createMemo(() => dashboards()[currentIndex()]);
 
-	const dashboardCharts = createMemo(() => {
+	const [charts, setCharts] = createSignal<ReadonlyArray<ChartLite>>([]);
+	const [loading, setLoading] = createSignal(false);
+	const chartCache = new Map<string, ReadonlyArray<ChartLite>>();
+
+	createEffect(() => {
 		const dash = currentDashboard();
-		if (!dash) return [];
-		return props.options.charts.filter((c) => c.dashboardId === dash.id);
+		if (!dash) {
+			setCharts([]);
+			setLoading(false);
+			return;
+		}
+
+		const cached = chartCache.get(dash.id);
+		if (cached) {
+			setCharts(cached);
+			setLoading(false);
+			return;
+		}
+
+		const dashboardId = dash.id;
+		let active = true;
+		setLoading(true);
+		setCharts([]);
+
+		void props.options.loadDashboard(dashboardId).then((loaded) => {
+			if (!active || currentDashboard()?.id !== dashboardId) return;
+			chartCache.set(dashboardId, loaded);
+			setCharts(loaded);
+			setLoading(false);
+		});
+
+		onCleanup(() => {
+			active = false;
+		});
 	});
 
 	const moveTab = (delta: number) => {
@@ -127,7 +164,7 @@ function DashboardApp(props: DashboardAppProps) {
 		setCurrentIndex((i) => Math.max(0, Math.min(total - 1, i + delta)));
 	};
 
-	const exit = () => renderer.destroy();
+	const exit = () => props.onExit();
 
 	useKeyboard((key) => {
 		switch (key.name) {
@@ -167,14 +204,23 @@ function DashboardApp(props: DashboardAppProps) {
 			/>
 			<Tabs dashboards={dashboards()} currentIndex={currentIndex()} />
 			<Divider />
-			<DashboardGrid
-				charts={dashboardCharts()}
-				dashboardId={currentDashboard()?.id ?? null}
-				preferredChartColors={props.options.preferredChartColors}
-			/>
+			<Show
+				when={!loading()}
+				fallback={
+					<box flexGrow={1} marginY={1} alignItems="center" justifyContent="center">
+						<text fg={theme.textMuted}>Loading dashboard…</text>
+					</box>
+				}
+			>
+				<DashboardGrid
+					charts={charts()}
+					dashboardId={currentDashboard()?.id ?? null}
+					preferredChartColors={props.options.preferredChartColors}
+				/>
+			</Show>
 			<Divider />
 			<Footer
-				chartCount={dashboardCharts().length}
+				chartCount={charts().length}
 				dashboardName={currentDashboard()?.name ?? "No dashboards"}
 				dashboardIndex={currentIndex()}
 				dashboardTotal={dashboardCount()}
@@ -390,8 +436,8 @@ function ChartBox(props: {
 	const height = createMemo(() =>
 		Math.max(2, props.pos.h * props.rowHeight - CELL_GAP),
 	);
-	const innerWidth = createMemo(() => Math.max(0, width() - 4));
-	const innerHeight = createMemo(() => Math.max(0, height() - 2));
+	const innerWidth = createMemo(() => Math.max(1, width() - 4));
+	const innerHeight = createMemo(() => Math.max(1, height() - 2));
 
 	const mapHighlights = createMemo(() => {
 		if (props.chart.chartType !== "map" || !isSeriesResult(props.chart.data)) {
@@ -425,10 +471,10 @@ function ChartBox(props: {
 			<ChartContent
 				chart={props.chart}
 				accent={props.accent}
-				innerWidth={innerWidth()}
-				innerHeight={innerHeight()}
+				innerWidth={innerWidth}
+				innerHeight={innerHeight}
 				preferredChartColors={props.preferredChartColors}
-				mapHighlights={mapHighlights()}
+				mapHighlights={mapHighlights}
 			/>
 		</box>
 	);
@@ -437,40 +483,40 @@ function ChartBox(props: {
 function ChartContent(props: {
 	chart: ChartLite;
 	accent: string;
-	innerWidth: number;
-	innerHeight: number;
+	innerWidth: () => number;
+	innerHeight: () => number;
 	preferredChartColors: ReadonlyArray<string> | null;
-	mapHighlights: ReturnType<typeof seriesToMapHighlights>;
+	mapHighlights: () => ReturnType<typeof seriesToMapHighlights>;
 }) {
-	const common = {
+	const common = () => ({
 		data: props.chart.data,
 		queryConfig: props.chart.queryConfig,
 		accent: props.accent,
-		innerWidth: props.innerWidth,
-		innerHeight: props.innerHeight,
-	};
+		innerWidth: props.innerWidth(),
+		innerHeight: props.innerHeight(),
+	});
 
 	switch (props.chart.chartType) {
 		case "widget":
-			return <WidgetChart {...common} />;
+			return <WidgetChart {...common()} />;
 		case "list":
-			return <ListChart {...common} />;
+			return <ListChart {...common()} />;
 		case "bar":
 			return (
 				<BarChart
-					{...common}
+					{...common()}
 					flowMeta={props.chart.flowMeta}
 					preferredChartColors={props.preferredChartColors}
 				/>
 			);
 		case "pie":
 			return (
-				<PieChart {...common} preferredChartColors={props.preferredChartColors} />
+				<PieChart {...common()} preferredChartColors={props.preferredChartColors} />
 			);
 		case "line":
 			return (
 				<LineAreaChart
-					{...common}
+					{...common()}
 					chartType="line"
 					flowMeta={props.chart.flowMeta}
 					preferredChartColors={props.preferredChartColors}
@@ -479,7 +525,7 @@ function ChartContent(props: {
 		case "area":
 			return (
 				<LineAreaChart
-					{...common}
+					{...common()}
 					chartType="area"
 					flowMeta={props.chart.flowMeta}
 					preferredChartColors={props.preferredChartColors}
@@ -489,9 +535,9 @@ function ChartContent(props: {
 			return (
 				<MapChart
 					accent={props.accent}
-					innerWidth={props.innerWidth}
-					innerHeight={props.innerHeight}
-					highlights={props.mapHighlights}
+					innerWidth={props.innerWidth()}
+					innerHeight={props.innerHeight()}
+					highlights={props.mapHighlights()}
 				/>
 			);
 		default:

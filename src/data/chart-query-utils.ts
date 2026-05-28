@@ -1,15 +1,15 @@
 import type {
-	ChartFlowMetaLite,
-	ChartQueryConfigLite,
-	SeriesEntry,
-	SeriesRows,
+    ChartFlowMetaLite,
+    ChartQueryConfigLite,
+    SeriesEntry,
+    SeriesRows,
 } from "./chart-data.ts";
-import { parseSeriesEntries, resolveMetricKey, toFiniteNumber } from "./chart-data.ts";
+import { parseSeriesEntries, resolveMetricKey } from "./chart-data.ts";
 
 const VALUE_KEY_RE = /^value_(\d+)$/;
 const SERIES_KEY_RE = /^series_(\d+)$/;
 
-export interface ChartSeriesDescriptor {
+interface ChartSeriesDescriptor {
 	readonly dataKey: string;
 	readonly label: string;
 }
@@ -41,7 +41,7 @@ function getBreakdownLabels(rows: SeriesRows): Map<string, string> {
 	return labels;
 }
 
-export function getChartSeries({
+function getChartSeries({
 	rows,
 	metrics,
 	outputDescriptors = [],
@@ -69,7 +69,7 @@ export function getChartSeries({
 	});
 }
 
-export function pivotScalarMultiOutputToCategories({
+function pivotScalarMultiOutputToCategories({
 	rows,
 	metrics = [],
 	outputDescriptors = [],
@@ -83,11 +83,10 @@ export function pivotScalarMultiOutputToCategories({
 
 	const sourceRow = rows[0]!;
 	return series.map((entry) => {
-		const numeric = toFiniteNumber(sourceRow[entry.dataKey]) ?? 0;
 		return {
 			name: entry.label,
-			value: numeric,
-			value_0: numeric,
+			value: Number(sourceRow[entry.dataKey]),
+			value_0: Number(sourceRow[entry.dataKey]),
 		};
 	});
 }
@@ -98,7 +97,7 @@ export interface PreparedBarChartData {
 	readonly useDynamicColors: boolean;
 }
 
-export interface PreparedLineAreaSeries {
+interface PreparedLineAreaSeries {
 	readonly label: string;
 	readonly values: ReadonlyArray<number>;
 }
@@ -126,7 +125,7 @@ export function prepareLineAreaChartData(
 	return {
 		series: descriptors.map(({ dataKey, label }) => ({
 			label,
-			values: rows.map((row) => toFiniteNumber(row[dataKey]) ?? 0),
+			values: rows.map((row) => Number(row[dataKey]) ?? 0),
 		})),
 	};
 }
@@ -156,7 +155,7 @@ export function prepareBarChartData(
 		return {
 			entries: pivoted.map((row) => ({
 				name: String(row.name),
-				value: toFiniteNumber(row.value_0 ?? row.value) ?? 0,
+				value: Number(row.value_0 ?? row.value),
 			})),
 			isTimeGrouped: false,
 			useDynamicColors: true,

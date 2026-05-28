@@ -24,7 +24,7 @@ export const EMPTY_METRIC: Metric = {
 	trend: { direction: "flat", percent: 0 },
 };
 
-export function trendFromChange(change: number | null): Trend {
+function trendFromChange(change: number | null): Trend {
 	if (change == null || change === 0) {
 		return { direction: "flat", percent: 0 };
 	}
@@ -34,12 +34,3 @@ export function trendFromChange(change: number | null): Trend {
 	};
 }
 
-export function metricFromChange(
-	value: number | null,
-	change: number | null,
-): Metric {
-	return {
-		value: value ?? 0,
-		trend: trendFromChange(change),
-	};
-}

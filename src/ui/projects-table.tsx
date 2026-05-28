@@ -14,7 +14,7 @@ import {
 } from "solid-js";
 import { formatWidgetTrend, formatWidgetValue } from "../data/chart-data.ts";
 import type { Metric, Project, Trend } from "../data/project.ts";
-import { createOpenTuiRenderer, waitForDestroy } from "./open-tui.ts";
+import { runOpenTui } from "./open-tui.ts";
 import { chartColor, theme } from "./theme.ts";
 
 const PROJECT_METRICS = [
@@ -33,9 +33,6 @@ const ROW_GAP = 1;
 const ROW_STRIDE = ROW_HEIGHT + ROW_GAP;
 const AVATAR_WIDTH = 3;
 
-const padLeft = (text: string, width: number) =>
-	text.length >= width ? text.slice(0, width) : " ".repeat(width - text.length) + text;
-
 const listContentHeight = (count: number) =>
 	count <= 0 ? 0 : count * ROW_HEIGHT + (count - 1) * ROW_GAP;
 
@@ -53,12 +50,10 @@ const formatTrend = (trend: Trend): { text: string; color: string } => {
 const scoreProject = (project: Project, query: string): number => {
 	const name = project.name.toLowerCase();
 	const slug = project.slug.toLowerCase();
-	const slugBare = slug.startsWith("/") ? slug.slice(1) : slug;
+	const slugBare = slug.replace(/^\//, "");
 
 	if (name === query || slug === query || slugBare === query) return 100;
-	if (name.startsWith(query) || slugBare.startsWith(query) || slug.startsWith(query)) {
-		return 80;
-	}
+	if (name.startsWith(query) || slugBare.startsWith(query)) return 80;
 	if (name.includes(query) || slugBare.includes(query)) return 60;
 	return 0;
 };
@@ -105,23 +100,9 @@ export type RunProjectsTableResult =
 export async function runProjectsTable(
 	options: RunProjectsTableOptions,
 ): Promise<RunProjectsTableResult> {
-	let outcome: RunProjectsTableResult = { kind: "cancelled" };
-	const renderer = await createOpenTuiRenderer();
-
-	await render(
-		() => (
-			<ProjectsApp
-				options={options}
-				onDone={(next) => {
-					outcome = next;
-					renderer.destroy();
-				}}
-			/>
-		),
-		renderer,
+	return runOpenTui(({ renderer, close }) =>
+		render(() => <ProjectsApp options={options} onDone={close} />, renderer),
 	);
-
-	return waitForDestroy(renderer, outcome);
 }
 
 interface ProjectsAppProps {
@@ -257,8 +238,10 @@ function useSelectableList(itemCount: Accessor<number>) {
 	const [index, setIndex] = createSignal(0);
 	let scrollTarget: ScrollBoxRenderable | undefined;
 
-	const clamp = (value: number) =>
-		Math.max(0, Math.min(Math.max(0, itemCount() - 1), value));
+	const clamp = (value: number) => {
+		const max = Math.max(0, itemCount() - 1);
+		return Math.min(max, Math.max(0, value));
+	};
 
 	createEffect(() => {
 		itemCount();
@@ -313,7 +296,7 @@ function ColumnLabels() {
 						flexShrink={0}
 						width={column.width}
 					>
-						{padLeft(`${column.label} ⇅`, column.width)}
+						{`${column.label} ⇅`.padEnd(column.width)}
 					</text>
 				)}
 			</For>
@@ -412,7 +395,7 @@ function MetricCell(props: { metric: Metric; width: number }) {
 			flexShrink={0}
 			fg={props.metric.value === 0 ? theme.textMuted : theme.text}
 		>
-			{padLeft(formatWidgetValue(props.metric.value), props.width)}
+			{formatWidgetValue(props.metric.value).padEnd(props.width)}
 		</text>
 	);
 }
@@ -421,7 +404,7 @@ function TrendCell(props: { trend: Trend; width: number }) {
 	const formatted = createMemo(() => formatTrend(props.trend));
 	return (
 		<text width={props.width} flexShrink={0} fg={formatted().color}>
-			{padLeft(formatted().text, props.width)}
+			{formatted().text.padEnd(props.width)}
 		</text>
 	);
 }

@@ -29,15 +29,13 @@ const dark = {
 	sidebarRing: "#737373",
 } as const;
 
-export const tokens = {
+const tokens = {
 	...dark,
 	border: "#252525",
 	input: "#313131",
 	sidebarBorder: "#2e2e2e",
 	success: "#3cbd4b",
 } as const;
-
-export type Tokens = typeof tokens;
 
 export const theme = {
 	bg: tokens.background,
@@ -61,8 +59,6 @@ export const theme = {
 		tokens.chart5,
 	] as const,
 } as const;
-
-export type Theme = typeof theme;
 
 export function chartColor(index: number): string {
 	const palette = theme.chartPalette;

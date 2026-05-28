@@ -4,9 +4,9 @@ import {
 	formatWidgetTrend,
 	formatWidgetValue,
 	isWidgetResult,
-	type ChartQueryConfigLite,
-	type ChartData,
 	toFiniteNumber,
+	type ChartData,
+	type ChartQueryConfigLite,
 } from "../data/chart-data.ts";
 import { theme } from "./theme.ts";
 
@@ -19,25 +19,23 @@ export interface WidgetChartProps {
 }
 
 export function WidgetChart(props: WidgetChartProps) {
-	const widgetData = createMemo(() =>
-		isWidgetResult(props.data) ? props.data : null,
-	);
 	const valueFormat = () =>
 		props.queryConfig?.visualOptions?.widget?.valueFormat ?? "number";
 	const showTrend = () =>
 		props.queryConfig?.visualOptions?.widget?.showTrend !== false;
 
+	const metric = createMemo(() => {
+		if (!isWidgetResult(props.data)) return null;
+		return props.data[0]?.[0] ?? null;
+	});
+
 	const valueText = createMemo(() => {
-		const data = widgetData();
-		if (!data) return "—";
-		const value = toFiniteNumber(data.value);
+		const value = toFiniteNumber(metric()?.value);
 		return formatWidgetValue(value, valueFormat());
 	});
 
 	const trendInfo = createMemo(() => {
-		const data = widgetData();
-		if (!data) return formatWidgetTrend(0);
-		const trend = toFiniteNumber(data.trend) ?? 0;
+		const trend = toFiniteNumber(metric()?.trend) ?? 0;
 		return formatWidgetTrend(trend);
 	});
 

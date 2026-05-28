@@ -2,19 +2,16 @@ import { Console, Effect } from "effect";
 import { Command } from "effect/unstable/cli";
 import { FastStatsApi } from "../api-client.ts";
 import type { ChartsListCharts200 } from "../api.ts";
-import { toFiniteNumber } from "../data/chart-data.ts";
-import type { ChartQueryConfigLite } from "../data/chart-data.ts";
 import {
-	EMPTY_METRIC,
-	metricFromChange,
-	type Metric,
-	type Project,
-} from "../data/project.ts";
+    type ChartData,
+    type ChartQueryConfigLite
+} from "../data/chart-data.ts";
+import { EMPTY_METRIC, type Project } from "../data/project.ts";
 import {
-	type ChartLite,
-	type DashboardLite,
-	type GridPosition,
-	runDashboardView,
+    type ChartLite,
+    type DashboardLite,
+    type GridPosition,
+    runDashboardView,
 } from "../ui/dashboard-view.tsx";
 import { runProjectsTable } from "../ui/projects-table.tsx";
 
@@ -24,23 +21,17 @@ export const projectsCommand = Command.make("projects", {}, () =>
 	Effect.gen(function* () {
 		const api = yield* FastStatsApi;
 		const response = yield* api.ProjectsListProjects(undefined);
-		const dashboardStats = yield* api.MetricsGetProjectsDashboardData({
-			payload: { projectIds: response.items.map((item) => item.id) },
-		});
 
-		const projects: ReadonlyArray<Project> = response.items.map((item) => {
-			const stats = dashboardStats.stats[item.id];
-			return {
-				id: item.id,
-				name: item.name,
-				slug: `/${item.slug}`,
-				visibility: item.private ? "private" : "public",
-				preferredChartColors: item.preferredChartColors,
-				events: metricFromStats(stats, "events"),
-				errors: metricFromStats(stats, "errors"),
-				users: metricFromStats(stats, "users"),
-			};
-		});
+		const projects: ReadonlyArray<Project> = response.items.map((item) => ({
+			id: item.id,
+			name: item.name,
+			slug: `/${item.slug}`,
+			visibility: item.private ? "private" : "public",
+			preferredChartColors: item.preferredChartColors,
+			events: EMPTY_METRIC,
+			errors: EMPTY_METRIC,
+			users: EMPTY_METRIC,
+		}));
 
 		while (true) {
 			const result = yield* Effect.tryPromise(() =>
@@ -55,64 +46,34 @@ export const projectsCommand = Command.make("projects", {}, () =>
 			const project = result.project;
 			yield* Console.log(`Loading ${project.name}…`);
 
-			const [dashboards, charts] = yield* Effect.all(
-				[
-					api.DashboardsListDashboards(project.id, undefined),
-					api.ChartsListCharts(project.id, undefined),
-				],
-				{ concurrency: "unbounded" },
-			);
+			const dashboards = yield* api.DashboardsListDashboards(project.id, undefined);
+			const dashboardLite: ReadonlyArray<DashboardLite> = dashboards.map((d) => ({
+				id: d.id,
+				name: d.name,
+				isDefault: d.isDefault,
+			}));
 
-			const chartDataByDashboard = new Map(
-				(yield* Effect.all(
-					dashboards.map((dashboard) =>
-						api.MetricsLoadDashboardData({
-							payload: {
-								projectId: project.id,
-								dashboardId: dashboard.id,
-								timeRange: {
-									type: "relative",
-									maxAgeMs: DEFAULT_TIME_RANGE_MS,
-								},
+			const loadDashboard = (dashboardId: string) =>
+				Effect.gen(function* () {
+					const charts = yield* api.ChartsListCharts(project.id, {
+						params: { dashboardId },
+					});
+					if (charts.length === 0) return [] as const;
+
+					const dashboardData = yield* api.MetricsLoadDashboardData({
+						payload: {
+							projectId: project.id,
+							dashboardId,
+							timeRange: {
+								type: "relative",
+								maxAgeMs: DEFAULT_TIME_RANGE_MS,
 							},
-						}).pipe(
-							Effect.map((response) => [
-								dashboard.id,
-								{
-									charts: response.charts,
-									flowMeta: response.flowMeta ?? null,
-								},
-							] as const),
-						),
-					),
-					{ concurrency: "unbounded" },
-				)),
-			);
+						},
+					});
 
-			const dashboardLite: ReadonlyArray<DashboardLite> = dashboards.map(
-				(d) => ({
-					id: d.id,
-					name: d.name,
-					isDefault: d.isDefault,
-				}),
-			);
-
-			const chartLite: ReadonlyArray<ChartLite> = charts.map((c) => {
-				const dashboardData =
-					c.dashboardId != null
-						? chartDataByDashboard.get(c.dashboardId)
-						: null;
-				return {
-					id: c.id,
-					name: c.name,
-					chartType: c.chartType,
-					dashboardId: c.dashboardId,
-					position: toGridPosition(c.position),
-					queryConfig: toQueryConfigLite(c.queryConfig),
-					data: dashboardData?.charts[c.id] ?? null,
-					flowMeta: dashboardData?.flowMeta?.[c.id] ?? null,
-				};
-			});
+					const chartData = dashboardData.charts as Record<string, ChartData>;
+					return charts.map((c) => toChartLite(c, chartData, dashboardData.flowMeta));
+				}).pipe(Effect.runPromise);
 
 			yield* Effect.tryPromise(() =>
 				runDashboardView({
@@ -120,32 +81,28 @@ export const projectsCommand = Command.make("projects", {}, () =>
 					projectSlug: project.slug,
 					preferredChartColors: project.preferredChartColors,
 					dashboards: dashboardLite,
-					charts: chartLite,
+					loadDashboard,
 				}),
 			);
 		}
 	}),
 ).pipe(Command.withDescription("Browse projects in the terminal UI"));
 
-type DashboardStats = {
-	readonly events?: number | string | "NaN" | "Infinity" | "-Infinity" | null;
-	readonly eventsChange?: number | string | "NaN" | "Infinity" | "-Infinity" | null;
-	readonly errors?: number | string | "NaN" | "Infinity" | "-Infinity" | null;
-	readonly errorsChange?: number | string | "NaN" | "Infinity" | "-Infinity" | null;
-	readonly users?: number | string | "NaN" | "Infinity" | "-Infinity" | null;
-	readonly usersChange?: number | string | "NaN" | "Infinity" | "-Infinity" | null;
-};
-
-function metricFromStats(
-	stats: DashboardStats | undefined,
-	field: "events" | "errors" | "users",
-): Metric {
-	if (!stats) return EMPTY_METRIC;
-	const changeField = `${field}Change` as const;
-	return metricFromChange(
-		toFiniteNumber(stats[field]),
-		toFiniteNumber(stats[changeField]),
-	);
+function toChartLite(
+	chart: ChartsListCharts200[number],
+	chartData: Record<string, ChartData>,
+	flowMeta: { readonly [x: string]: ChartLite["flowMeta"] } | null | undefined,
+): ChartLite {
+	return {
+		id: chart.id,
+		name: chart.name,
+		chartType: chart.chartType,
+		dashboardId: chart.dashboardId,
+		position: toGridPosition(chart.position),
+		queryConfig: toQueryConfigLite(chart.queryConfig),
+		data: chartData[chart.id] ?? null,
+		flowMeta: flowMeta?.[chart.id] ?? null,
+	};
 }
 
 function toGridPosition(
@@ -160,10 +117,7 @@ function toGridPosition(
 		| undefined,
 ): GridPosition | null {
 	if (!pos) return null;
-	const x = toFiniteNumber(pos.x);
-	const y = toFiniteNumber(pos.y);
-	const w = toFiniteNumber(pos.w);
-	const h = toFiniteNumber(pos.h);
+	const [x, y, w, h] = [pos.x, pos.y, pos.w, pos.h].map(Number);
 	if (x == null || y == null || w == null || h == null) return null;
 	return { x, y, w, h };
 }
@@ -174,19 +128,18 @@ function toQueryConfigLite(
 	queryConfig: ApiChartQueryConfig | null,
 ): ChartQueryConfigLite | null {
 	if (!queryConfig) return null;
+	const { primaryMetric, metrics, visualOptions } = queryConfig;
 	return {
-		primaryMetric: queryConfig.primaryMetric
-			? { field: queryConfig.primaryMetric.field }
-			: null,
-		metrics: queryConfig.metrics?.map((m) => ({ field: m.field })) ?? null,
-		visualOptions: queryConfig.visualOptions
+		primaryMetric: primaryMetric ? { field: primaryMetric.field } : null,
+		metrics: metrics?.map((m) => ({ field: m.field })) ?? null,
+		visualOptions: visualOptions
 			? {
-					colors: queryConfig.visualOptions.colors,
-					widget: queryConfig.visualOptions.widget
+					colors: visualOptions.colors,
+					widget: visualOptions.widget
 						? {
-								showTrend: queryConfig.visualOptions.widget.showTrend,
-								displayMode: queryConfig.visualOptions.widget.displayMode,
-								valueFormat: queryConfig.visualOptions.widget.valueFormat,
+								showTrend: visualOptions.widget.showTrend,
+								displayMode: visualOptions.widget.displayMode,
+								valueFormat: visualOptions.widget.valueFormat,
 							}
 						: null,
 				}

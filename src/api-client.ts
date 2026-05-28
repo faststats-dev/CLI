@@ -4,7 +4,7 @@ import * as HttpClientRequest from "effect/unstable/http/HttpClientRequest";
 import * as Api from "./api.ts";
 import { loadCredentials, resolveCredentials } from "./config.ts";
 
-export class MissingApiKeyError extends Data.TaggedError("MissingApiKeyError")<{
+class MissingApiKeyError extends Data.TaggedError("MissingApiKeyError")<{
 	readonly variable: string;
 }> {}
 

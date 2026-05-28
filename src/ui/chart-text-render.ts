@@ -3,7 +3,7 @@ import { bucketSeriesEntries } from "../data/chart-data.ts";
 import { getChartColor } from "../data/chart-color-palette.ts";
 import { theme } from "./theme.ts";
 
-export interface ChartLineSegment {
+interface ChartLineSegment {
 	readonly text: string;
 	readonly color: string;
 }
