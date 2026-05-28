@@ -10,7 +10,7 @@ import {
     createSignal,
     For,
     Show,
-    type Accessor,
+    type Accessor
 } from "solid-js";
 import { formatWidgetTrend, formatWidgetValue } from "../data/chart-data.ts";
 import type { Metric, Project, Trend } from "../data/project.ts";
@@ -262,10 +262,6 @@ function useSelectableList(itemCount: Accessor<number>) {
 
 	createEffect(() => {
 		itemCount();
-		setIndex(0);
-	});
-
-	createEffect(() => {
 		scrollTarget?.scrollTo({ x: 0, y: index() * ROW_STRIDE });
 	});
 
