@@ -1,7 +1,28 @@
 import { Console, Effect } from "effect";
 import { Command } from "effect/unstable/cli";
-import { formatAuthStatus } from "../auth/status.ts";
-import { loadAuthStatus, loadConfig, resolveCredentials } from "../config.ts";
+import {
+	type AuthMethod,
+	type AuthSource,
+	type AuthStatus,
+	loadAuthStatus,
+	loadConfig,
+	resolveCredentials,
+} from "../config.ts";
+
+const METHOD_LABEL: Record<AuthMethod, string> = {
+	"api-key": "API key",
+	"access-token": "access token",
+};
+
+const SOURCE_LABEL: Record<AuthSource, string> = {
+	environment: "environment",
+	"os-secrets": "OS secrets",
+};
+
+const formatAuthStatus = (status: AuthStatus): string => {
+	if (!status.authenticated) return "not logged in";
+	return `logged in (${METHOD_LABEL[status.method]}, ${SOURCE_LABEL[status.source]})`;
+};
 
 export const statusCommand = Command.make("status", {}, () =>
 	Effect.gen(function* () {
