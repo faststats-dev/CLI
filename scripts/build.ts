@@ -3,6 +3,8 @@ import solidPlugin from "@opentui/solid/bun-plugin";
 const result = await Bun.build({
 	entrypoints: ["src/index.ts"],
 	target: "bun",
+	minify: true,
+	sourcemap: false,
 	plugins: [solidPlugin],
 	compile: {
 		outfile: "faststats",
