@@ -14,8 +14,7 @@ export const FastStatsApi = Effect.gen(function* () {
 
 	if (!apiKey && !accessToken) {
 		return yield* new MissingApiKeyError({
-			variable:
-				"FASTSTATS_API_KEY, FASTSTATS_ACCESS_TOKEN, or OS secrets",
+			variable: "FASTSTATS_API_KEY, FASTSTATS_ACCESS_TOKEN, or OS secrets",
 		});
 	}
 

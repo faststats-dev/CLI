@@ -1,8 +1,8 @@
-import { type BoxRenderable, FrameBufferRenderable, RGBA } from "@opentui/core";
-import { useRenderer } from "@opentui/solid";
-import { createEffect, createMemo, createSignal, onCleanup } from "solid-js";
+import { type FrameBufferRenderable, RGBA } from "@opentui/core";
+import { createMemo } from "solid-js";
 import type { MapChartHighlight } from "../data/chart-data.ts";
 import { BRAILLE_BASE, BRAILLE_DOT_BITS } from "./braille.ts";
+import { FrameBufferView } from "./chart-shared.tsx";
 import { theme } from "./theme.ts";
 import { findCountryIndex, rasterizeWorld } from "./world-map-data.ts";
 
@@ -14,15 +14,6 @@ export interface MapChartProps {
 }
 
 export function MapChart(props: MapChartProps) {
-	const renderer = useRenderer();
-
-	const charWidth = createMemo(() =>
-		Math.max(1, Math.floor(props.innerWidth)),
-	);
-	const charHeight = createMemo(() =>
-		Math.max(1, Math.floor(props.innerHeight)),
-	);
-
 	const oceanColor = RGBA.fromHex(theme.surface);
 	const landColor = RGBA.fromHex(theme.borderStrong);
 
@@ -36,52 +27,20 @@ export function MapChart(props: MapChartProps) {
 		return map;
 	});
 
-	const [parentBox, setParentBox] = createSignal<BoxRenderable | undefined>();
-	let frameBuffer: FrameBufferRenderable | undefined;
-
-	createEffect(() => {
-		const parent = parentBox();
-		const w = charWidth();
-		const h = charHeight();
-		const highlights = highlightMap();
-		if (!parent || w <= 0 || h <= 0) return;
-
-		const sizeChanged =
-			frameBuffer !== undefined &&
-			(frameBuffer.width !== w || frameBuffer.height !== h);
-
-		if (frameBuffer && sizeChanged) {
-			parent.remove(frameBuffer.id);
-			frameBuffer.destroy();
-			frameBuffer = undefined;
-		}
-
-		if (!frameBuffer) {
-			frameBuffer = new FrameBufferRenderable(renderer, {
-				width: w,
-				height: h,
-			});
-			parent.add(frameBuffer);
-		}
-
-		drawWorldMap(frameBuffer, w, h, oceanColor, landColor, highlights);
-		frameBuffer.requestRender();
-	});
-
-	onCleanup(() => {
-		frameBuffer?.destroy();
-		frameBuffer = undefined;
-	});
-
 	return (
-		<box
-			ref={(el) => setParentBox(el ?? undefined)}
-			flexDirection="column"
-			width="100%"
-			height="100%"
-			alignItems="center"
-			justifyContent="center"
-			overflow="hidden"
+		<FrameBufferView
+			innerWidth={props.innerWidth}
+			innerHeight={props.innerHeight}
+			draw={(frameBuffer, width, height) =>
+				drawWorldMap(
+					frameBuffer,
+					width,
+					height,
+					oceanColor,
+					landColor,
+					highlightMap(),
+				)
+			}
 		/>
 	);
 }
@@ -107,12 +66,13 @@ function drawWorldMap(
 			for (let sy = 0; sy < 4; sy++) {
 				const py = cy * 4 + sy;
 				const rowBase = py * pxW;
-				const bitRow = BRAILLE_DOT_BITS[sy]!;
+				const bitRow = BRAILLE_DOT_BITS[sy];
+				if (bitRow === undefined) continue;
 				for (let sx = 0; sx < 2; sx++) {
 					const px = cx * 2 + sx;
 					const id = pixels[rowBase + px] ?? 0;
 					if (id === 0) continue;
-					dots |= bitRow[sx]!;
+					dots |= bitRow[sx] ?? 0;
 					const hit = highlights.get(id);
 					if (hit) highlightColor = hit;
 				}

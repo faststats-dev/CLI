@@ -1,6 +1,6 @@
+import { getChartColor } from "../data/chart-color-palette.ts";
 import type { SeriesEntry } from "../data/chart-data.ts";
 import { bucketSeriesEntries } from "../data/chart-data.ts";
-import { getChartColor } from "../data/chart-color-palette.ts";
 import { theme } from "./theme.ts";
 
 interface ChartLineSegment {
@@ -11,6 +11,17 @@ interface ChartLineSegment {
 export interface ColoredBarChartRow {
 	readonly segments: ReadonlyArray<ChartLineSegment>;
 	readonly muted?: boolean;
+}
+
+interface BarLayout {
+	readonly grid: string[][];
+	readonly label: string | null;
+}
+
+interface BarGeometry {
+	readonly start: number;
+	readonly width: number;
+	readonly height: number;
 }
 
 export function renderVerticalBarLines(
@@ -34,40 +45,23 @@ export function renderCategoricalBarRows(
 ): ReadonlyArray<ColoredBarChartRow> {
 	if (entries.length === 0 || width <= 0 || height <= 0) return [];
 
-	const labelRows = height >= 4 ? 1 : 0;
-	const plotRows = Math.max(1, height - labelRows - 1);
-	const max = Math.max(...entries.map((entry) => entry.value), 1);
-	const grid = Array.from({ length: plotRows }, () =>
-		Array.from({ length: width }, () => " "),
-	);
+	const layout = renderCategoricalBars(entries, width, height);
 	const colors: string[] = Array.from({ length: width }, () => theme.surface);
 
-	for (let index = 0; index < entries.length; index++) {
-		const entry = entries[index]!;
+	for (const [index, entry] of entries.entries()) {
 		const color = getChartColor([...palette], index);
-		const slotStart = Math.floor((index * width) / entries.length);
-		const slotEnd = Math.floor(((index + 1) * width) / entries.length);
-		const slotWidth = Math.max(1, slotEnd - slotStart);
-		const barWidth = Math.max(1, Math.floor(slotWidth * 0.65));
-		const center = slotStart + Math.floor(slotWidth / 2);
-		const barStart = Math.max(
-			0,
-			Math.min(width - barWidth, center - Math.floor(barWidth / 2)),
+		const bar = barGeometry(
+			index,
+			entry.value,
+			entries,
+			width,
+			layout.grid.length,
 		);
-		const barHeight = Math.max(
-			1,
-			Math.round((entry.value / max) * plotRows),
-		);
-
-		for (let row = 0; row < barHeight; row++) {
-			for (let col = barStart; col < barStart + barWidth; col++) {
-				grid[plotRows - 1 - row]![col] = "█";
-				colors[col] = color;
-			}
-		}
+		for (let col = bar.start; col < bar.start + bar.width; col++)
+			colors[col] = color;
 	}
 
-	const rows: ColoredBarChartRow[] = grid.map((line) => ({
+	const rows: ColoredBarChartRow[] = layout.grid.map((line) => ({
 		segments: compressLineSegments(line, colors),
 	}));
 	rows.push({
@@ -75,21 +69,9 @@ export function renderCategoricalBarRows(
 		muted: true,
 	});
 
-	if (labelRows > 0) {
-		const labels = Array.from({ length: width }, () => " ");
-		for (let index = 0; index < entries.length; index++) {
-			const slotStart = Math.floor((index * width) / entries.length);
-			const slotEnd = Math.floor(((index + 1) * width) / entries.length);
-			const slotWidth = Math.max(1, slotEnd - slotStart);
-			const label = entries[index]!.name.slice(0, slotWidth);
-			const offset =
-				slotStart + Math.max(0, Math.floor((slotWidth - label.length) / 2));
-			for (let i = 0; i < label.length && offset + i < width; i++) {
-				labels[offset + i] = label[i]!;
-			}
-		}
+	if (layout.label) {
 		rows.push({
-			segments: [{ text: labels.join(""), color: theme.textMuted }],
+			segments: [{ text: layout.label, color: theme.textMuted }],
 			muted: true,
 		});
 	}
@@ -104,7 +86,7 @@ function compressLineSegments(
 	if (chars.length === 0) return [];
 
 	const segments: ChartLineSegment[] = [];
-	let text = chars[0]!;
+	let text = chars[0] ?? "";
 	let color = colors[0] ?? theme.surface;
 
 	for (let index = 1; index < chars.length; index++) {
@@ -114,7 +96,7 @@ function compressLineSegments(
 			continue;
 		}
 		segments.push({ text, color });
-		text = chars[index]!;
+		text = chars[index] ?? "";
 		color = nextColor;
 	}
 
@@ -127,52 +109,75 @@ function renderCategoricalBarLines(
 	width: number,
 	height: number,
 ): ReadonlyArray<string> {
+	const { grid, label } = renderCategoricalBars(entries, width, height);
+	return [
+		...grid.map((row) => row.join("")),
+		"─".repeat(width),
+		...(label ? [label] : []),
+	];
+}
+
+function renderCategoricalBars(
+	entries: ReadonlyArray<SeriesEntry>,
+	width: number,
+	height: number,
+): BarLayout {
 	const labelRows = height >= 4 ? 1 : 0;
 	const plotRows = Math.max(1, height - labelRows - 1);
-	const max = Math.max(...entries.map((entry) => entry.value), 1);
 	const grid = Array.from({ length: plotRows }, () =>
 		Array.from({ length: width }, () => " "),
 	);
 
-	for (let index = 0; index < entries.length; index++) {
-		const entry = entries[index]!;
+	for (const [index, entry] of entries.entries()) {
+		const bar = barGeometry(index, entry.value, entries, width, plotRows);
+		for (let row = 0; row < bar.height; row++) {
+			for (let col = bar.start; col < bar.start + bar.width; col++) {
+				const line = grid[plotRows - 1 - row];
+				if (line) line[col] = "█";
+			}
+		}
+	}
+
+	return { grid, label: labelRows > 0 ? renderLabels(entries, width) : null };
+}
+
+function barGeometry(
+	index: number,
+	value: number,
+	entries: ReadonlyArray<SeriesEntry>,
+	width: number,
+	plotRows: number,
+): BarGeometry {
+	const max = Math.max(...entries.map((entry) => entry.value), 1);
+	const slotStart = Math.floor((index * width) / entries.length);
+	const slotEnd = Math.floor(((index + 1) * width) / entries.length);
+	const slotWidth = Math.max(1, slotEnd - slotStart);
+	const barWidth = Math.max(1, Math.floor(slotWidth * 0.65));
+	const center = slotStart + Math.floor(slotWidth / 2);
+	const barStart = Math.max(
+		0,
+		Math.min(width - barWidth, center - Math.floor(barWidth / 2)),
+	);
+	const barHeight = Math.max(1, Math.round((value / max) * plotRows));
+	return { start: barStart, width: barWidth, height: barHeight };
+}
+
+function renderLabels(
+	entries: ReadonlyArray<SeriesEntry>,
+	width: number,
+): string {
+	const labels = Array.from({ length: width }, () => " ");
+	for (const [index, entry] of entries.entries()) {
 		const slotStart = Math.floor((index * width) / entries.length);
 		const slotEnd = Math.floor(((index + 1) * width) / entries.length);
 		const slotWidth = Math.max(1, slotEnd - slotStart);
-		const barWidth = Math.max(1, Math.floor(slotWidth * 0.65));
-		const center = slotStart + Math.floor(slotWidth / 2);
-		const barStart = Math.max(0, Math.min(width - barWidth, center - Math.floor(barWidth / 2)));
-		const barHeight = Math.max(
-			1,
-			Math.round((entry.value / max) * plotRows),
-		);
-
-		for (let row = 0; row < barHeight; row++) {
-			for (let col = barStart; col < barStart + barWidth; col++) {
-				grid[plotRows - 1 - row]![col] = "█";
-			}
-		}
+		const label = entry.name.slice(0, slotWidth);
+		const offset =
+			slotStart + Math.max(0, Math.floor((slotWidth - label.length) / 2));
+		for (let i = 0; i < label.length && offset + i < width; i++)
+			labels[offset + i] = label[i] ?? " ";
 	}
-
-	const lines = grid.map((row) => row.join(""));
-	lines.push("─".repeat(width));
-
-	if (labelRows > 0) {
-		const labels = Array.from({ length: width }, () => " ");
-		for (let index = 0; index < entries.length; index++) {
-			const slotStart = Math.floor((index * width) / entries.length);
-			const slotEnd = Math.floor(((index + 1) * width) / entries.length);
-			const slotWidth = Math.max(1, slotEnd - slotStart);
-			const label = entries[index]!.name.slice(0, slotWidth);
-			const offset = slotStart + Math.max(0, Math.floor((slotWidth - label.length) / 2));
-			for (let i = 0; i < label.length && offset + i < width; i++) {
-				labels[offset + i] = label[i]!;
-			}
-		}
-		lines.push(labels.join(""));
-	}
-
-	return lines;
+	return labels.join("");
 }
 
 function renderTimeSeriesBarLines(
@@ -188,12 +193,12 @@ function renderTimeSeriesBarLines(
 	);
 
 	for (let col = 0; col < data.length; col++) {
-		const barHeight = Math.max(
-			1,
-			Math.round((data[col]!.value / max) * plotRows),
-		);
+		const entry = data[col];
+		if (!entry) continue;
+		const barHeight = Math.max(1, Math.round((entry.value / max) * plotRows));
 		for (let row = 0; row < barHeight; row++) {
-			grid[plotRows - 1 - row]![col] = "█";
+			const line = grid[plotRows - 1 - row];
+			if (line) line[col] = "█";
 		}
 	}
 

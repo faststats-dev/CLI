@@ -8,6 +8,7 @@
 	},
 	"scripts": {
 		"build": "bun run scripts/build.ts",
+		"check": "biome check .",
 		"typecheck": "tsc --noEmit",
 		"completions:fish": "./faststats --completions fish",
 		"completions:zsh": "./faststats --completions zsh",

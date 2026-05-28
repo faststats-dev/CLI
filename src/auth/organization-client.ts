@@ -44,14 +44,12 @@ const authRequest = <T>(
 			return payload;
 		},
 		catch: (error) =>
-			error instanceof Error
-				? error
-				: new Error("Organization request failed"),
+			error instanceof Error ? error : new Error("Organization request failed"),
 	});
 
 export const resolveAccessToken = Effect.gen(function* () {
 	const credentials = yield* loadCredentials;
-	const { accessToken } = resolveCredentials(credentials);
+	const { accessToken, apiUrl } = resolveCredentials(credentials);
 	if (!accessToken) {
 		return yield* Effect.fail(
 			new Error(
@@ -59,7 +57,6 @@ export const resolveAccessToken = Effect.gen(function* () {
 			),
 		);
 	}
-	const { apiUrl } = resolveCredentials(credentials);
 	return {
 		accessToken,
 		authBaseUrl: `${apiUrl.replace(/\/$/, "")}/auth`,
@@ -77,7 +74,9 @@ export const listOrganizations = (authBaseUrl: string, accessToken: string) =>
 export const setActiveOrganization = (
 	authBaseUrl: string,
 	accessToken: string,
-	target: { readonly organizationId: string | null } | { readonly organizationSlug: string },
+	target:
+		| { readonly organizationId: string | null }
+		| { readonly organizationSlug: string },
 ) =>
 	authRequest(authBaseUrl, accessToken, "/organization/set-active", {
 		method: "POST",

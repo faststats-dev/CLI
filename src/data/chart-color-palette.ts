@@ -8,13 +8,14 @@ const SINGLE_COLOR_SATURATION_OFFSETS = [
 	0, 6, -6, 10, -10, 12, -12, 14, -14, 16,
 ];
 
+const DEFAULT_CHART_COLOR = "#FDBA74";
 const DEFAULT_CHART_COLORS = [
 	"#FDBA74",
 	"#F97316",
 	"#EA580C",
 	"#C2410C",
 	"#9A3412",
-];
+] as const;
 
 function clamp(value: number, min: number, max: number) {
 	return Math.min(max, Math.max(min, value));
@@ -154,17 +155,19 @@ function buildChartPalette(
 	const fallback = sanitizeInputColors(fallbackColors);
 	const seed = baseColors.length > 0 ? baseColors : fallback;
 
-	if (seed.length === 0) return [DEFAULT_CHART_COLORS[0]!];
+	if (seed.length === 0) return [DEFAULT_CHART_COLOR];
 	if (seed.length >= safeCount) return seed.slice(0, safeCount);
 
 	const result = [...seed];
 	while (result.length < safeCount) {
-		if (seed.length === 1) {
-			result.push(generateFromSingleColor(seed[0]!, result.length));
+		const [firstSeed] = seed;
+		if (seed.length === 1 && firstSeed !== undefined) {
+			result.push(generateFromSingleColor(firstSeed, result.length));
 			continue;
 		}
 
-		const anchor = seed[result.length % seed.length]!;
+		const anchor = seed[result.length % seed.length];
+		if (anchor === undefined) break;
 		const bump = Math.floor(result.length / seed.length);
 		const { h, s, l } = hexToHsl(anchor);
 		result.push(
@@ -180,8 +183,10 @@ function buildChartPalette(
 }
 
 export function getChartColor(palette: string[], index: number): string {
-	if (!palette.length) return DEFAULT_CHART_COLORS[0]!;
-	return palette[index % palette.length]!;
+	if (!palette.length) return DEFAULT_CHART_COLOR;
+	const normalizedIndex =
+		((index % palette.length) + palette.length) % palette.length;
+	return palette[normalizedIndex] ?? DEFAULT_CHART_COLOR;
 }
 
 export function resolveChartPalette(

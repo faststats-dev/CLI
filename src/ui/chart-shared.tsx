@@ -1,3 +1,6 @@
+import { type BoxRenderable, FrameBufferRenderable } from "@opentui/core";
+import { useRenderer } from "@opentui/solid";
+import { createEffect, createMemo, createSignal, onCleanup } from "solid-js";
 import type { ChartData, ChartQueryConfigLite } from "../data/chart-data.ts";
 import { theme } from "./theme.ts";
 
@@ -20,5 +23,62 @@ export function ChartEmptyState(props: { readonly message?: string }) {
 		>
 			<text fg={theme.textMuted}>{props.message ?? "No data"}</text>
 		</box>
+	);
+}
+
+export function FrameBufferView(props: {
+	readonly innerWidth: number;
+	readonly innerHeight: number;
+	readonly draw: (
+		frameBuffer: FrameBufferRenderable,
+		width: number,
+		height: number,
+	) => void;
+}) {
+	const renderer = useRenderer();
+	const width = createMemo(() => Math.max(1, Math.floor(props.innerWidth)));
+	const height = createMemo(() => Math.max(1, Math.floor(props.innerHeight)));
+	const [parentBox, setParentBox] = createSignal<BoxRenderable | undefined>();
+	let frameBuffer: FrameBufferRenderable | undefined;
+
+	createEffect(() => {
+		const parent = parentBox();
+		const w = width();
+		const h = height();
+		if (!parent) return;
+
+		if (frameBuffer && (frameBuffer.width !== w || frameBuffer.height !== h)) {
+			parent.remove(frameBuffer.id);
+			frameBuffer.destroy();
+			frameBuffer = undefined;
+		}
+
+		if (!frameBuffer) {
+			frameBuffer = new FrameBufferRenderable(renderer, {
+				width: w,
+				height: h,
+			});
+			parent.add(frameBuffer);
+		}
+
+		props.draw(frameBuffer, w, h);
+		frameBuffer.requestRender();
+	});
+
+	onCleanup(() => {
+		frameBuffer?.destroy();
+		frameBuffer = undefined;
+	});
+
+	return (
+		<box
+			ref={(el) => setParentBox(el ?? undefined)}
+			flexDirection="column"
+			width="100%"
+			height="100%"
+			alignItems="center"
+			justifyContent="center"
+			overflow="hidden"
+		/>
 	);
 }

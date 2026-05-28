@@ -1,5 +1,9 @@
 import { createMemo, For, Show } from "solid-js";
-import { getChartColor, resolveChartPalette } from "../data/chart-color-palette.ts";
+import {
+	getChartColor,
+	resolveChartPalette,
+} from "../data/chart-color-palette.ts";
+import type { ChartFlowMetaLite } from "../data/chart-data.ts";
 import {
 	parseSeriesEntries,
 	resolveListTabIndex,
@@ -7,16 +11,18 @@ import {
 	resolveSeriesRows,
 	truncateLabel,
 } from "../data/chart-data.ts";
-import { prepareBarChartData, prepareLineAreaChartData } from "../data/chart-query-utils.ts";
+import {
+	prepareBarChartData,
+	prepareLineAreaChartData,
+} from "../data/chart-query-utils.ts";
+import { ChartEmptyState, type SeriesChartProps } from "./chart-shared.tsx";
 import {
 	renderCategoricalBarRows,
 	renderVerticalBarLines,
 } from "./chart-text-render.ts";
-import { ChartEmptyState, type SeriesChartProps } from "./chart-shared.tsx";
 import { LineAreaChartView } from "./line-area-chart.tsx";
 import { resolveLineAreaSeriesStyle } from "./line-area-chart-renderer.ts";
 import { theme } from "./theme.ts";
-import type { ChartFlowMetaLite } from "../data/chart-data.ts";
 
 export interface BarChartProps extends SeriesChartProps {
 	readonly preferredChartColors: ReadonlyArray<string> | null;
@@ -60,7 +66,9 @@ export function BarChart(props: BarChartProps) {
 			{ isTimeGrouped },
 		);
 	});
-	const axisStart = createMemo(() => lines().length - (props.innerHeight >= 4 ? 2 : 1));
+	const axisStart = createMemo(
+		() => lines().length - (props.innerHeight >= 4 ? 2 : 1),
+	);
 
 	return (
 		<Show
@@ -126,11 +134,13 @@ export function PieChart(props: PieChartProps) {
 		entries().reduce((sum, item) => sum + item.value, 0),
 	);
 	const legend = createMemo(() =>
-		entries().slice(0, Math.max(1, props.innerHeight)).map((entry, index) => ({
-			entry,
-			color: getChartColor(palette(), index),
-			share: total() === 0 ? 0 : (entry.value / total()) * 100,
-		})),
+		entries()
+			.slice(0, Math.max(1, props.innerHeight))
+			.map((entry, index) => ({
+				entry,
+				color: getChartColor(palette(), index),
+				share: total() === 0 ? 0 : (entry.value / total()) * 100,
+			})),
 	);
 	const stacked = createMemo(() => {
 		const width = Math.max(1, props.innerWidth);
@@ -198,8 +208,7 @@ export function LineAreaChart(props: LineAreaChartProps) {
 	);
 	const styledSeries = createMemo(() =>
 		prepared().series.map((entry, index) => {
-			const lineColor =
-				getChartColor(palette(), index) ?? props.accent;
+			const lineColor = getChartColor(palette(), index) ?? props.accent;
 			const colors = resolveLineAreaSeriesStyle(lineColor);
 			return {
 				label: entry.label,

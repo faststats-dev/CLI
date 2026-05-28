@@ -166,19 +166,21 @@ function buildListRowSegments(options: {
 
 	const name = truncateLabel(options.name, options.nameMax);
 	for (let index = 0; index < name.length; index++) {
-		chars[index] = name[index]!;
+		chars[index] = name[index] ?? " ";
 		fg[index] = theme.text;
 		if (index < options.fillWidth) {
 			bg[index] = theme.muted;
 		}
 	}
 
-	const valueText = formatWidgetValue(options.value).padStart(options.valueWidth);
+	const valueText = formatWidgetValue(options.value).padStart(
+		options.valueWidth,
+	);
 	const valueStart = options.innerWidth - options.valueWidth;
 	for (let index = 0; index < valueText.length; index++) {
 		const column = valueStart + index;
 		if (column < 0 || column >= options.innerWidth) continue;
-		chars[column] = valueText[index]!;
+		chars[column] = valueText[index] ?? " ";
 		fg[column] = theme.textMuted;
 	}
 
@@ -193,7 +195,7 @@ function compressListRowSegments(
 	if (chars.length === 0) return [];
 
 	const segments: ListRowSegment[] = [];
-	let text = chars[0]!;
+	let text = chars[0] ?? "";
 	let currentFg = fg[0];
 	let currentBg = bg[0];
 
@@ -209,7 +211,7 @@ function compressListRowSegments(
 			...(currentFg ? { fg: currentFg } : {}),
 			...(currentBg ? { bg: currentBg } : {}),
 		});
-		text = chars[index]!;
+		text = chars[index] ?? "";
 		currentFg = nextFg;
 		currentBg = nextBg;
 	}

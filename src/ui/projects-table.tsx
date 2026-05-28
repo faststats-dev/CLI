@@ -1,31 +1,20 @@
 import {
-    type KeyEvent,
-    type ScrollBoxRenderable,
-    TextAttributes,
+	type KeyEvent,
+	type ScrollBoxRenderable,
+	TextAttributes,
 } from "@opentui/core";
 import { render, useKeyboard } from "@opentui/solid";
 import {
-    createEffect,
-    createMemo,
-    createSignal,
-    For,
-    Show,
-    type Accessor
+	type Accessor,
+	createEffect,
+	createMemo,
+	createSignal,
+	For,
+	Show,
 } from "solid-js";
-import { formatWidgetTrend, formatWidgetValue } from "../data/chart-data.ts";
-import type { Metric, Project, Trend } from "../data/project.ts";
+import type { Project } from "../data/project.ts";
 import { runOpenTui } from "./open-tui.ts";
 import { chartColor, theme } from "./theme.ts";
-
-const PROJECT_METRICS = [
-	{ key: "events", label: "Events", width: 14 },
-	{ key: "errors", label: "Errors", width: 12 },
-	{ key: "users", label: "Users", width: 14 },
-] as const satisfies ReadonlyArray<{
-	key: "events" | "errors" | "users";
-	label: string;
-	width: number;
-}>;
 
 const VISIBILITY_GLYPH = { public: "○", private: "⌧" } as const;
 const ROW_HEIGHT = 3;
@@ -35,17 +24,6 @@ const AVATAR_WIDTH = 3;
 
 const listContentHeight = (count: number) =>
 	count <= 0 ? 0 : count * ROW_HEIGHT + (count - 1) * ROW_GAP;
-
-const formatTrend = (trend: Trend): { text: string; color: string } => {
-	if (trend.direction === "flat" || trend.percent === 0) {
-		return { text: "—", color: theme.textMuted };
-	}
-	const change =
-		trend.direction === "up" ? trend.percent : -trend.percent;
-	const formatted = formatWidgetTrend(change);
-	const arrow = trend.direction === "up" ? "↑" : "↓";
-	return { text: `${arrow} ${formatted.text}`, color: formatted.color };
-};
 
 const scoreProject = (project: Project, query: string): number => {
 	const name = project.name.toLowerCase();
@@ -116,7 +94,9 @@ function ProjectsApp(props: ProjectsAppProps) {
 		filterProjects(props.options.projects, searchQuery()),
 	);
 	const list = useSelectableList(() => visibleProjects().length);
-	const listHeight = createMemo(() => listContentHeight(visibleProjects().length));
+	const listHeight = createMemo(() =>
+		listContentHeight(visibleProjects().length),
+	);
 
 	useKeyboard((key) => {
 		if (key.name === "backspace") {
@@ -149,7 +129,9 @@ function ProjectsApp(props: ProjectsAppProps) {
 			return;
 		}
 
-		const navigation: Partial<Record<KeyEvent["name"], number | "start" | "end">> = {
+		const navigation: Partial<
+			Record<KeyEvent["name"], number | "start" | "end">
+		> = {
 			up: -1,
 			k: -1,
 			down: 1,
@@ -262,7 +244,11 @@ function Header(props: { title: string; searchQuery: string }) {
 	return (
 		<box flexDirection="column" flexShrink={0} marginBottom={1}>
 			<box flexDirection="row" height={1}>
-				<text fg={theme.textBright} attributes={TextAttributes.BOLD} flexGrow={1}>
+				<text
+					fg={theme.textBright}
+					attributes={TextAttributes.BOLD}
+					flexGrow={1}
+				>
 					{props.title}
 				</text>
 				<text fg={theme.textMuted}>↑↓ ↵ select · esc clear · q quit</text>
@@ -288,18 +274,6 @@ function ColumnLabels() {
 			>
 				Project ↑
 			</text>
-			<For each={PROJECT_METRICS}>
-				{(column) => (
-					<text
-						fg={theme.textMuted}
-						attributes={TextAttributes.BOLD}
-						flexShrink={0}
-						width={column.width}
-					>
-						{`${column.label} ⇅`.padEnd(column.width)}
-					</text>
-				)}
-			</For>
 		</box>
 	);
 }
@@ -361,50 +335,13 @@ function ProjectRow(props: {
 					>
 						{props.project.name}
 					</text>
-					<For each={PROJECT_METRICS}>
-						{(column) => (
-							<MetricCell
-								metric={props.project[column.key]}
-								width={column.width}
-							/>
-						)}
-					</For>
 				</box>
 				<box flexDirection="row" height={1}>
 					<text fg={theme.textDim} flexGrow={1} flexShrink={1}>
 						{props.project.slug} {VISIBILITY_GLYPH[props.project.visibility]}
 					</text>
-					<For each={PROJECT_METRICS}>
-						{(column) => (
-							<TrendCell
-								trend={props.project[column.key].trend}
-								width={column.width}
-							/>
-						)}
-					</For>
 				</box>
 			</box>
 		</box>
-	);
-}
-
-function MetricCell(props: { metric: Metric; width: number }) {
-	return (
-		<text
-			width={props.width}
-			flexShrink={0}
-			fg={props.metric.value === 0 ? theme.textMuted : theme.text}
-		>
-			{formatWidgetValue(props.metric.value).padEnd(props.width)}
-		</text>
-	);
-}
-
-function TrendCell(props: { trend: Trend; width: number }) {
-	const formatted = createMemo(() => formatTrend(props.trend));
-	return (
-		<text width={props.width} flexShrink={0} fg={formatted().color}>
-			{formatted().text.padEnd(props.width)}
-		</text>
 	);
 }

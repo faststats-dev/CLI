@@ -99,7 +99,9 @@ const initCommand = Command.make("init", {}, () =>
 
 		yield* saveApiKey(apiKey);
 		yield* saveConfig({ apiUrl, appUrl });
-		yield* Console.log(`Wrote URLs to ${CONFIG_PATH} and API key to OS secrets`);
+		yield* Console.log(
+			`Wrote URLs to ${CONFIG_PATH} and API key to OS secrets`,
+		);
 	}),
 ).pipe(Command.withDescription("Interactively configure the CLI"));
 

@@ -1,15 +1,15 @@
 import { Cause, Console, Effect, Option } from "effect";
 import { Command, Flag, Prompt } from "effect/unstable/cli";
-import {
-    hasProjectCreatePermission,
-    listCreatableOrganizations,
-    listOrganizations,
-    resolveAccessToken,
-    resolveOrganizationByRef,
-    setActiveOrganization,
-    type OrganizationSummary,
-} from "../../auth/organization-client.ts";
 import { FastStatsApi } from "../../api-client.ts";
+import {
+	hasProjectCreatePermission,
+	listCreatableOrganizations,
+	listOrganizations,
+	type OrganizationSummary,
+	resolveAccessToken,
+	resolveOrganizationByRef,
+	setActiveOrganization,
+} from "../../auth/organization-client.ts";
 import { validateProjectName } from "../../project-validation.ts";
 
 const CREATE_PROJECT_PERMISSION_ERROR =
@@ -17,10 +17,7 @@ const CREATE_PROJECT_PERMISSION_ERROR =
 
 const PROJECT_CREATE_TEMPLATE_ID = "minecraft-plugin";
 
-const promptIfAbsent = <A>(
-	value: Option.Option<A>,
-	prompt: Prompt.Prompt<A>,
-) =>
+const promptIfAbsent = <A>(value: Option.Option<A>, prompt: Prompt.Prompt<A>) =>
 	Option.match(value, {
 		onNone: () => prompt,
 		onSome: Effect.succeed,
@@ -45,14 +42,6 @@ const formatApiError = (error: unknown): string => {
 	return "Failed to create project";
 };
 
-const applyActiveOrganization = (
-	authBaseUrl: string,
-	accessToken: string,
-	target:
-		| { readonly organizationId: string | null }
-		| { readonly organizationSlug: string },
-) => setActiveOrganization(authBaseUrl, accessToken, target);
-
 const resolveInteractiveOrganization = (
 	authBaseUrl: string,
 	accessToken: string,
@@ -76,13 +65,7 @@ const resolveInteractiveOrganization = (
 		choices,
 	}).pipe(
 		Effect.flatMap((organizationId) =>
-			organizationId === null
-				? applyActiveOrganization(authBaseUrl, accessToken, {
-						organizationId: null,
-					})
-				: applyActiveOrganization(authBaseUrl, accessToken, {
-						organizationId,
-					}),
+			setActiveOrganization(authBaseUrl, accessToken, { organizationId }),
 		),
 	);
 };
@@ -115,7 +98,7 @@ const resolveOrganizationContext = (orgFlag: Option.Option<string>) =>
 					);
 				}
 			}
-			yield* applyActiveOrganization(authBaseUrl, accessToken, target);
+			yield* setActiveOrganization(authBaseUrl, accessToken, target);
 			return;
 		}
 
@@ -174,7 +157,13 @@ export const projectCreateCommand = Command.make(
 			Flag.withDescription("Allowed hostname"),
 		),
 	},
-	({ name, private: privateFlag, errorTracking: errorTrackingFlag, org, hostname }) =>
+	({
+		name,
+		private: privateFlag,
+		errorTracking: errorTrackingFlag,
+		org,
+		hostname,
+	}) =>
 		Effect.gen(function* () {
 			const projectName = name.trim();
 			const nameError = validateProjectName(projectName);
@@ -217,18 +206,20 @@ export const projectCreateCommand = Command.make(
 				onSome: (value) => [value],
 			});
 
-			const project = yield* api.ProjectsCreateProject({
-				payload: {
-					name: projectName,
-					private: isPrivate,
-					templateId: PROJECT_CREATE_TEMPLATE_ID,
-					allowedHostnames,
-				},
-			}).pipe(
-				Effect.catchCause((cause) =>
-					Effect.fail(new Error(formatApiError(Cause.squash(cause)))),
-				),
-			);
+			const project = yield* api
+				.ProjectsCreateProject({
+					payload: {
+						name: projectName,
+						private: isPrivate,
+						templateId: PROJECT_CREATE_TEMPLATE_ID,
+						allowedHostnames,
+					},
+				})
+				.pipe(
+					Effect.catchCause((cause) =>
+						Effect.fail(new Error(formatApiError(Cause.squash(cause)))),
+					),
+				);
 
 			const updateResult = yield* Effect.result(
 				api.ProjectsUpdateProject(project.id, {

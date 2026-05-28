@@ -1,17 +1,14 @@
 import { Console, Effect } from "effect";
 import { Command } from "effect/unstable/cli";
-import { FastStatsApi } from "../api-client.ts";
 import type { ChartsListCharts200 } from "../api.ts";
+import { FastStatsApi } from "../api-client.ts";
+import type { ChartData, ChartQueryConfigLite } from "../data/chart-data.ts";
+import type { Project } from "../data/project.ts";
 import {
-    type ChartData,
-    type ChartQueryConfigLite
-} from "../data/chart-data.ts";
-import { EMPTY_METRIC, type Project } from "../data/project.ts";
-import {
-    type ChartLite,
-    type DashboardLite,
-    type GridPosition,
-    runDashboardView,
+	type ChartLite,
+	type DashboardLite,
+	type GridPosition,
+	runDashboardView,
 } from "../ui/dashboard-view.tsx";
 import { runProjectsTable } from "../ui/projects-table.tsx";
 
@@ -28,9 +25,6 @@ export const projectsCommand = Command.make("projects", {}, () =>
 			slug: `/${item.slug}`,
 			visibility: item.private ? "private" : "public",
 			preferredChartColors: item.preferredChartColors,
-			events: EMPTY_METRIC,
-			errors: EMPTY_METRIC,
-			users: EMPTY_METRIC,
 		}));
 
 		while (true) {
@@ -46,12 +40,17 @@ export const projectsCommand = Command.make("projects", {}, () =>
 			const project = result.project;
 			yield* Console.log(`Loading ${project.name}…`);
 
-			const dashboards = yield* api.DashboardsListDashboards(project.id, undefined);
-			const dashboardLite: ReadonlyArray<DashboardLite> = dashboards.map((d) => ({
-				id: d.id,
-				name: d.name,
-				isDefault: d.isDefault,
-			}));
+			const dashboards = yield* api.DashboardsListDashboards(
+				project.id,
+				undefined,
+			);
+			const dashboardLite: ReadonlyArray<DashboardLite> = dashboards.map(
+				(d) => ({
+					id: d.id,
+					name: d.name,
+					isDefault: d.isDefault,
+				}),
+			);
 
 			const loadDashboard = (dashboardId: string) =>
 				Effect.gen(function* () {
@@ -72,7 +71,9 @@ export const projectsCommand = Command.make("projects", {}, () =>
 					});
 
 					const chartData = dashboardData.charts as Record<string, ChartData>;
-					return charts.map((c) => toChartLite(c, chartData, dashboardData.flowMeta));
+					return charts.map((c) =>
+						toChartLite(c, chartData, dashboardData.flowMeta),
+					);
 				}).pipe(Effect.runPromise);
 
 			yield* Effect.tryPromise(() =>
@@ -117,12 +118,17 @@ function toGridPosition(
 		| undefined,
 ): GridPosition | null {
 	if (!pos) return null;
-	const [x, y, w, h] = [pos.x, pos.y, pos.w, pos.h].map(Number);
-	if (x == null || y == null || w == null || h == null) return null;
+	const x = Number(pos.x);
+	const y = Number(pos.y);
+	const w = Number(pos.w);
+	const h = Number(pos.h);
+	if (![x, y, w, h].every(Number.isFinite)) return null;
 	return { x, y, w, h };
 }
 
-type ApiChartQueryConfig = NonNullable<ChartsListCharts200[number]["queryConfig"]>;
+type ApiChartQueryConfig = NonNullable<
+	ChartsListCharts200[number]["queryConfig"]
+>;
 
 function toQueryConfigLite(
 	queryConfig: ApiChartQueryConfig | null,

@@ -6,7 +6,7 @@
 		"useIgnoreFile": true
 	},
 	"files": {
-		"includes": ["*", "!src/api.ts"],
+		"includes": ["**", "!src/api.ts"],
 		"ignoreUnknown": false
 	},
 	"formatter": {

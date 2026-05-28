@@ -9,4 +9,6 @@ export const loginCommand = Command.make("login", {}, () =>
 		const { apiUrl, appUrl } = resolveCredentials(config);
 		yield* runDeviceLogin(apiUrl, appUrl);
 	}),
-).pipe(Command.withDescription("Log in with browser-based device authorization"));
+).pipe(
+	Command.withDescription("Log in with browser-based device authorization"),
+);

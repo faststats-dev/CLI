@@ -1,10 +1,14 @@
 import type {
-    ChartFlowMetaLite,
-    ChartQueryConfigLite,
-    SeriesEntry,
-    SeriesRows,
+	ChartFlowMetaLite,
+	ChartQueryConfigLite,
+	SeriesEntry,
+	SeriesRows,
 } from "./chart-data.ts";
-import { parseSeriesEntries, resolveMetricKey } from "./chart-data.ts";
+import {
+	parseSeriesEntries,
+	resolveMetricKey,
+	toFiniteNumber,
+} from "./chart-data.ts";
 
 const VALUE_KEY_RE = /^value_(\d+)$/;
 const SERIES_KEY_RE = /^series_(\d+)$/;
@@ -17,9 +21,8 @@ interface ChartSeriesDescriptor {
 function getChartValueKeys(rows: SeriesRows): string[] {
 	const keys = new Set<string>();
 	for (const row of rows) {
-		for (const key of Object.keys(row)) {
+		for (const key of Object.keys(row))
 			if (VALUE_KEY_RE.test(key)) keys.add(key);
-		}
 	}
 	return [...keys].sort(
 		(left, right) =>
@@ -54,7 +57,9 @@ function getChartSeries({
 	const dataKeys = getChartValueKeys(rows);
 	const metricList = metrics ?? [];
 	const keys =
-		dataKeys.length > 0 ? dataKeys : metricList.map((_, index) => `value_${index}`);
+		dataKeys.length > 0
+			? dataKeys
+			: metricList.map((_, index) => `value_${index}`);
 
 	return keys.map((dataKey, index) => {
 		const descriptor = outputDescriptors[index];
@@ -81,13 +86,11 @@ function pivotScalarMultiOutputToCategories({
 	const series = getChartSeries({ rows, metrics, outputDescriptors });
 	if (rows.length !== 1 || series.length <= 1) return null;
 
-	const sourceRow = rows[0]!;
-	return series.map((entry) => {
-		return {
-			name: entry.label,
-			value: Number(sourceRow[entry.dataKey]),
-			value_0: Number(sourceRow[entry.dataKey]),
-		};
+	const [sourceRow] = rows;
+	if (sourceRow === undefined) return null;
+	return series.flatMap((entry) => {
+		const value = toFiniteNumber(sourceRow[entry.dataKey]);
+		return value == null ? [] : [{ name: entry.label, value, value_0: value }];
 	});
 }
 
@@ -125,7 +128,7 @@ export function prepareLineAreaChartData(
 	return {
 		series: descriptors.map(({ dataKey, label }) => ({
 			label,
-			values: rows.map((row) => Number(row[dataKey]) ?? 0),
+			values: rows.map((row) => toFiniteNumber(row[dataKey]) ?? 0),
 		})),
 	};
 }

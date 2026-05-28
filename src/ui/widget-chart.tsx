@@ -1,12 +1,12 @@
 import { TextAttributes } from "@opentui/core";
 import { createMemo, Show } from "solid-js";
 import {
-	formatWidgetTrend,
-	formatWidgetValue,
-	isWidgetResult,
-	toFiniteNumber,
 	type ChartData,
 	type ChartQueryConfigLite,
+	formatWidgetTrend,
+	formatWidgetValue,
+	resolveWidgetMetric,
+	toFiniteNumber,
 } from "../data/chart-data.ts";
 import { theme } from "./theme.ts";
 
@@ -24,15 +24,11 @@ export function WidgetChart(props: WidgetChartProps) {
 	const showTrend = () =>
 		props.queryConfig?.visualOptions?.widget?.showTrend !== false;
 
-	const metric = createMemo(() => {
-		if (!isWidgetResult(props.data)) return null;
-		return props.data[0]?.[0] ?? null;
-	});
+	const metric = createMemo(() => resolveWidgetMetric(props.data));
 
-	const valueText = createMemo(() => {
-		const value = toFiniteNumber(metric()?.value);
-		return formatWidgetValue(value, valueFormat());
-	});
+	const valueText = createMemo(() =>
+		formatWidgetValue(metric()?.value, valueFormat()),
+	);
 
 	const trendInfo = createMemo(() => {
 		const trend = toFiniteNumber(metric()?.trend) ?? 0;
@@ -52,11 +48,7 @@ export function WidgetChart(props: WidgetChartProps) {
 				justifyContent="center"
 				alignItems="flex-start"
 			>
-				<text
-					fg={props.accent}
-					attributes={TextAttributes.BOLD}
-					flexShrink={1}
-				>
+				<text fg={props.accent} attributes={TextAttributes.BOLD} flexShrink={1}>
 					{valueText()}
 				</text>
 			</box>

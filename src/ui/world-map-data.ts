@@ -1,18 +1,13 @@
-import type {
-	Feature,
-	FeatureCollection,
-	MultiPolygon,
-	Polygon,
-} from "geojson";
+import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 import { feature } from "topojson-client";
 import type { GeometryCollection, Topology } from "topojson-specification";
+import worldTopology from "world-atlas/countries-110m.json" with {
+	type: "json",
+};
 import {
 	ISO_ALPHA2_TO_NUMERIC,
 	ISO_ALPHA3_TO_NUMERIC,
 } from "../data/iso-alpha2-numeric.ts";
-import worldTopology from "world-atlas/countries-110m.json" with {
-	type: "json",
-};
 
 interface CountryProperties {
 	name?: string;
@@ -51,8 +46,7 @@ const COUNTRIES: ReadonlyArray<CountryFeature> = featureCollection.features
 
 const COUNTRY_INDEX_BY_ID = new Map<string, number>();
 const COUNTRY_INDEX_BY_NAME = new Map<string, number>();
-for (let i = 0; i < COUNTRIES.length; i++) {
-	const c = COUNTRIES[i]!;
+for (const [i, c] of COUNTRIES.entries()) {
 	COUNTRY_INDEX_BY_ID.set(c.id, i);
 	if (c.name) {
 		COUNTRY_INDEX_BY_NAME.set(c.name.toLowerCase(), i);
@@ -187,8 +181,9 @@ function rasterizePolygon(
 		for (const ring of projected) {
 			const len = ring.length;
 			for (let i = 0; i < len; i++) {
-				const p1 = ring[i]!;
-				const p2 = ring[(i + 1) % len]!;
+				const p1 = ring[i];
+				const p2 = ring[(i + 1) % len];
+				if (!p1 || !p2) continue;
 				if (Math.abs(p2.x - p1.x) > antimeridianThreshold) continue;
 				const y1 = p1.y;
 				const y2 = p2.y;
@@ -202,8 +197,11 @@ function rasterizePolygon(
 		intersections.sort((a, b) => a - b);
 
 		for (let i = 0; i + 1 < intersections.length; i += 2) {
-			const xStart = Math.max(0, Math.ceil(intersections[i]!));
-			const xEnd = Math.min(width - 1, Math.floor(intersections[i + 1]!));
+			const left = intersections[i];
+			const right = intersections[i + 1];
+			if (left === undefined || right === undefined) continue;
+			const xStart = Math.max(0, Math.ceil(left));
+			const xEnd = Math.min(width - 1, Math.floor(right));
 			const rowBase = y * width;
 			for (let x = xStart; x <= xEnd; x++) {
 				pixels[rowBase + x] = id;
@@ -231,8 +229,9 @@ function splitRingAtAntimeridian(
 	};
 	const crossings: Crossing[] = [];
 	for (let i = 0; i < len; i++) {
-		const p1 = ring[i]!;
-		const p2 = ring[(i + 1) % len]!;
+		const p1 = ring[i];
+		const p2 = ring[(i + 1) % len];
+		if (!p1 || !p2) continue;
 		const lon1 = p1[0] ?? 0;
 		const lat1 = p1[1] ?? 0;
 		const lon2 = p2[0] ?? 0;
@@ -260,10 +259,11 @@ function splitRingAtAntimeridian(
 	let cIdx = 0;
 
 	for (let i = 0; i < len; i++) {
-		const p = ring[i]!;
+		const p = ring[i];
+		if (!p) continue;
 		current.push([p[0] ?? 0, p[1] ?? 0]);
-		if (cIdx < sorted.length && sorted[cIdx]!.edgeIdx === i) {
-			const c = sorted[cIdx]!;
+		const c = sorted[cIdx];
+		if (c?.edgeIdx === i) {
 			const exitLon = c.goingEast ? 180 : -180;
 			const entryLon = c.goingEast ? -180 : 180;
 			current.push([exitLon, c.latAtCrossing]);
@@ -274,7 +274,7 @@ function splitRingAtAntimeridian(
 	}
 	if (current.length > 0) {
 		if (result.length > 0) {
-			result[0] = [...current, ...result[0]!];
+			result[0] = [...current, ...(result[0] ?? [])];
 		} else {
 			result.push(current);
 		}

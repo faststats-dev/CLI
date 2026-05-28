@@ -14,17 +14,13 @@ export const makeHostnamesCommand = (slug: string) => {
 				return;
 			}
 
-			if (!project.allowedHostnames) {
+			const hostnames = project.allowedHostnames ?? [];
+			if (hostnames.length === 0) {
 				yield* Console.log("No allowed hostnames configured.");
 				return;
 			}
 
-			if (project.allowedHostnames.length === 0) {
-				yield* Console.log("No allowed hostnames configured.");
-				return;
-			}
-
-			for (const hostname of project.allowedHostnames) {
+			for (const hostname of hostnames) {
 				yield* Console.log(hostname);
 			}
 		}),

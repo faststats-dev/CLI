@@ -105,8 +105,8 @@ function drawLine(
 	let y = Math.round(y0);
 	const endX = Math.round(x1);
 	const endY = Math.round(y1);
-	let dx = Math.abs(endX - x);
-	let dy = Math.abs(endY - y);
+	const dx = Math.abs(endX - x);
+	const dy = Math.abs(endY - y);
 	const sx = x < endX ? 1 : -1;
 	const sy = y < endY ? 1 : -1;
 	let err = dx - dy;
@@ -169,13 +169,13 @@ function sampleValueAtX(
 	x: number,
 	width: number,
 ): number {
-	if (values.length === 1) return values[0]!;
+	if (values.length === 1) return values[0] ?? 0;
 	const t = x / Math.max(width - 1, 1);
 	const index = t * (values.length - 1);
 	const left = Math.floor(index);
 	const right = Math.min(left + 1, values.length - 1);
 	const frac = index - left;
-	return values[left]! * (1 - frac) + values[right]! * frac;
+	return (values[left] ?? 0) * (1 - frac) + (values[right] ?? 0) * frac;
 }
 
 function drawGridLines(
@@ -209,17 +209,15 @@ function drawLineSeries(
 	if (values.length === 0) return;
 
 	for (let index = 0; index < values.length; index++) {
+		const value = values[index];
+		if (value === undefined) continue;
 		const x = pointX(index, values.length, buf.width);
-		const y = valueToY(values[index]!, min, max, chartTop, chartBottom);
+		const y = valueToY(value, min, max, chartTop, chartBottom);
 		if (index < values.length - 1) {
+			const nextValue = values[index + 1];
+			if (nextValue === undefined) continue;
 			const nextX = pointX(index + 1, values.length, buf.width);
-			const nextY = valueToY(
-				values[index + 1]!,
-				min,
-				max,
-				chartTop,
-				chartBottom,
-			);
+			const nextY = valueToY(nextValue, min, max, chartTop, chartBottom);
 			drawLine(buf, x, y, nextX, nextY, lineColor, LAYER_DATA);
 		} else {
 			setPixel(buf, x, y, lineColor, LAYER_DATA);
@@ -275,7 +273,7 @@ function renderPixelBufferToFrameBuffer(
 						topLayer = pixel.layer;
 						pattern = 0;
 					}
-					pattern |= BRAILLE_DOT_BITS[dy]![dx]!;
+					pattern |= BRAILLE_DOT_BITS[dy]?.[dx] ?? 0;
 					color = pixel.color;
 				}
 			}
@@ -329,12 +327,28 @@ export function drawLineAreaChart(
 		}
 		for (const entry of series) {
 			if (entry.values.length === 0) continue;
-			drawLineSeries(buf, entry.values, 0, chartBottom, entry.lineColor, min, max);
+			drawLineSeries(
+				buf,
+				entry.values,
+				0,
+				chartBottom,
+				entry.lineColor,
+				min,
+				max,
+			);
 		}
 	} else {
 		for (const entry of series) {
 			if (entry.values.length === 0) continue;
-			drawLineSeries(buf, entry.values, 0, chartBottom, entry.lineColor, min, max);
+			drawLineSeries(
+				buf,
+				entry.values,
+				0,
+				chartBottom,
+				entry.lineColor,
+				min,
+				max,
+			);
 		}
 	}
 

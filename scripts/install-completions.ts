@@ -67,15 +67,19 @@ console.log("Test with: faststats <TAB>");
 
 if (shell === "fish") {
 	console.log("");
-	console.log("Fish loads completions from ~/.config/fish/completions/ automatically.");
+	console.log(
+		"Fish loads completions from ~/.config/fish/completions/ automatically.",
+	);
 }
 
 if (shell === "zsh") {
 	console.log("");
-	console.log('Add to ~/.zshrc before compinit: fpath=(~/.zsh/completions $fpath)');
+	console.log(
+		"Add to ~/.zshrc before compinit: fpath=(~/.zsh/completions $fpath)",
+	);
 }
 
 if (shell === "bash") {
 	console.log("");
-	console.log('Add to ~/.bashrc: source ~/.bash_completion.d/faststats.bash');
+	console.log("Add to ~/.bashrc: source ~/.bash_completion.d/faststats.bash");
 }

@@ -13,9 +13,7 @@ const makeShowCommand = (slug: string) =>
 
 			yield* Console.log(`${project.name} (${project.slug})`);
 			yield* Console.log(`  id:       ${project.id}`);
-			yield* Console.log(
-				`  private:  ${project.private ? "yes" : "no"}`,
-			);
+			yield* Console.log(`  private:  ${project.private ? "yes" : "no"}`);
 
 			if (
 				isWebProject(project) &&

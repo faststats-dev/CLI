@@ -3,7 +3,6 @@ import { join } from "node:path";
 import { secrets } from "bun";
 import { Data, Effect } from "effect";
 import * as FileSystem from "effect/FileSystem";
-import * as Path from "effect/Path";
 
 class ConfigError extends Data.TaggedError("ConfigError")<{
 	readonly message: string;
@@ -39,14 +38,13 @@ const SECRET_SERVICE = "dev.faststats.cli";
 const API_KEY_SECRET = "api-key";
 const ACCESS_TOKEN_SECRET = "access-token";
 
-const secretError =
-	(action: string, name: string) => (error: unknown) =>
-		new ConfigError({
-			message:
-				error instanceof Error
-					? `Failed to ${action} ${name} in OS secrets: ${error.message}`
-					: `Failed to ${action} ${name} in OS secrets`,
-		});
+const secretError = (action: string, name: string) => (error: unknown) =>
+	new ConfigError({
+		message:
+			error instanceof Error
+				? `Failed to ${action} ${name} in OS secrets: ${error.message}`
+				: `Failed to ${action} ${name} in OS secrets`,
+	});
 
 const getSecret = (name: string) =>
 	Effect.tryPromise({
@@ -74,6 +72,23 @@ const deleteSecretIfPresent = (name: string) =>
 		}
 	});
 
+const envOrSecret = (envValue: string | undefined, secretName: string) =>
+	envValue
+		? Effect.succeed(envValue)
+		: getSecret(secretName).pipe(Effect.map((value) => value ?? undefined));
+
+const parseConfig = (content: string) =>
+	Effect.try({
+		try: () => JSON.parse(content) as FastStatsConfig,
+		catch: (error) =>
+			new ConfigError({
+				message:
+					error instanceof Error
+						? `Failed to parse ${CONFIG_PATH}: ${error.message}`
+						: `Failed to parse ${CONFIG_PATH}`,
+			}),
+	});
+
 export const loadConfig = Effect.gen(function* () {
 	const fs = yield* FileSystem.FileSystem;
 	const exists = yield* fs.exists(CONFIG_PATH);
@@ -81,8 +96,7 @@ export const loadConfig = Effect.gen(function* () {
 		return {} satisfies FastStatsConfig;
 	}
 	const content = yield* fs.readFileString(CONFIG_PATH);
-	const parsed = JSON.parse(content) as FastStatsConfig;
-	return parsed;
+	return yield* parseConfig(content);
 });
 
 export const loadAuthStatus = Effect.gen(function* () {
@@ -124,26 +138,28 @@ export const loadAuthStatus = Effect.gen(function* () {
 
 export const loadCredentials = Effect.gen(function* () {
 	const fileConfig = yield* loadConfig;
+	const [apiKey, accessToken] = yield* Effect.all(
+		[
+			envOrSecret(process.env.FASTSTATS_API_KEY, API_KEY_SECRET),
+			envOrSecret(process.env.FASTSTATS_ACCESS_TOKEN, ACCESS_TOKEN_SECRET),
+		],
+		{ concurrency: 2 },
+	);
 	return {
 		...fileConfig,
-		apiKey:
-			process.env.FASTSTATS_API_KEY ??
-			((yield* getSecret(API_KEY_SECRET)) ?? undefined),
-		accessToken:
-			process.env.FASTSTATS_ACCESS_TOKEN ??
-			((yield* getSecret(ACCESS_TOKEN_SECRET)) ?? undefined),
+		apiKey,
+		accessToken,
 	} satisfies FastStatsCredentials;
 });
 
 export const saveConfig = (config: FastStatsConfig) =>
 	Effect.gen(function* () {
 		const fs = yield* FileSystem.FileSystem;
-		const path = yield* Path.Path;
 		const fileConfig = {
 			...(config.apiUrl ? { apiUrl: config.apiUrl } : {}),
 			...(config.appUrl ? { appUrl: config.appUrl } : {}),
 		} satisfies FastStatsConfig;
-		yield* fs.makeDirectory(path.dirname(CONFIG_PATH), { recursive: true });
+		yield* fs.makeDirectory(CONFIG_DIR, { recursive: true });
 		yield* fs.writeFileString(
 			CONFIG_PATH,
 			`${JSON.stringify(fileConfig, null, 2)}\n`,
@@ -163,7 +179,10 @@ export const saveAccessToken = (accessToken: string) =>
 	});
 
 export const clearStoredCredentials = Effect.all(
-	[deleteSecretIfPresent(API_KEY_SECRET), deleteSecretIfPresent(ACCESS_TOKEN_SECRET)],
+	[
+		deleteSecretIfPresent(API_KEY_SECRET),
+		deleteSecretIfPresent(ACCESS_TOKEN_SECRET),
+	],
 	{ discard: true },
 );
 

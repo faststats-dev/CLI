@@ -1,7 +1,4 @@
-import {
-    type ScrollBoxRenderable,
-    TextAttributes,
-} from "@opentui/core";
+import { type ScrollBoxRenderable, TextAttributes } from "@opentui/core";
 import { render, useKeyboard, useTerminalDimensions } from "@opentui/solid";
 import {
 	createEffect,
@@ -12,12 +9,12 @@ import {
 	Show,
 } from "solid-js";
 import {
-    isSeriesResult,
-    resolveMetricKey,
-    seriesToMapHighlights,
-    type ChartData,
-    type ChartFlowMetaLite,
-    type ChartQueryConfigLite,
+	type ChartData,
+	type ChartFlowMetaLite,
+	type ChartQueryConfigLite,
+	isSeriesResult,
+	resolveMetricKey,
+	seriesToMapHighlights,
 } from "../data/chart-data.ts";
 import { ListChart } from "./list-chart.tsx";
 import { MapChart } from "./map-chart.tsx";
@@ -98,7 +95,12 @@ export async function runDashboardView(
 ): Promise<RunDashboardViewResult> {
 	return runOpenTui(({ renderer, close }) =>
 		render(
-			() => <DashboardApp options={options} onExit={() => close({ kind: "closed" })} />,
+			() => (
+				<DashboardApp
+					options={options}
+					onExit={() => close({ kind: "closed" })}
+				/>
+			),
 			renderer,
 		),
 	);
@@ -207,7 +209,12 @@ function DashboardApp(props: DashboardAppProps) {
 			<Show
 				when={!loading()}
 				fallback={
-					<box flexGrow={1} marginY={1} alignItems="center" justifyContent="center">
+					<box
+						flexGrow={1}
+						marginY={1}
+						alignItems="center"
+						justifyContent="center"
+					>
 						<text fg={theme.textMuted}>Loading dashboard…</text>
 					</box>
 				}
@@ -242,9 +249,7 @@ function Header(props: { title: string; subtitle: string }) {
 				</text>
 				<text fg={theme.textDim}>{` ${props.subtitle}`}</text>
 			</box>
-			<text fg={theme.textMuted}>
-				← → switch  ↑ ↓ scroll  ⇥ tab  q back
-			</text>
+			<text fg={theme.textMuted}>← → switch ↑ ↓ scroll ⇥ tab q back</text>
 		</box>
 	);
 }
@@ -511,7 +516,10 @@ function ChartContent(props: {
 			);
 		case "pie":
 			return (
-				<PieChart {...common()} preferredChartColors={props.preferredChartColors} />
+				<PieChart
+					{...common()}
+					preferredChartColors={props.preferredChartColors}
+				/>
 			);
 		case "line":
 			return (
@@ -559,12 +567,7 @@ function ChartContent(props: {
 
 function EmptyDashboard() {
 	return (
-		<box
-			flexGrow={1}
-			marginY={1}
-			alignItems="center"
-			justifyContent="center"
-		>
+		<box flexGrow={1} marginY={1} alignItems="center" justifyContent="center">
 			<text fg={theme.textMuted}>This dashboard has no charts yet.</text>
 		</box>
 	);
@@ -575,7 +578,9 @@ interface PlacedChart {
 	readonly pos: GridPosition;
 }
 
-function placeCharts(charts: ReadonlyArray<ChartLite>): ReadonlyArray<PlacedChart> {
+function placeCharts(
+	charts: ReadonlyArray<ChartLite>,
+): ReadonlyArray<PlacedChart> {
 	const placed: PlacedChart[] = [];
 	const occupied: number[] = [];
 

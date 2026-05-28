@@ -1,18 +1,16 @@
 import type { MetricsLoadDashboardData200 } from "../api.ts";
-import { getChartColor, resolveChartPalette } from "./chart-color-palette.ts";
 import { theme } from "../ui/theme.ts";
+import { getChartColor, resolveChartPalette } from "./chart-color-palette.ts";
 
 export interface MapChartHighlight {
 	readonly country: string;
 	readonly color: string;
 }
 
-interface WidgetMetric {
+export interface WidgetMetric {
 	readonly value?: number | string;
 	readonly trend?: number | string;
 }
-
-export type WidgetChartData = ReadonlyArray<ReadonlyArray<WidgetMetric>>;
 
 export type SeriesRows = ReadonlyArray<{
 	readonly name: string;
@@ -20,12 +18,15 @@ export type SeriesRows = ReadonlyArray<{
 }>;
 
 type TabsChartData = {
-	readonly tabs:
-		| ReadonlyArray<SeriesRows>
-		| Record<string, SeriesRows>;
+	readonly tabs: ReadonlyArray<SeriesRows> | Record<string, SeriesRows>;
 };
 
-export type ChartData = SeriesRows | TabsChartData | WidgetChartData;
+export type ChartData =
+	| SeriesRows
+	| TabsChartData
+	| WidgetMetric
+	| ReadonlyArray<WidgetMetric>
+	| ReadonlyArray<ReadonlyArray<WidgetMetric>>;
 
 export type ChartFlowMetaLite = NonNullable<
 	MetricsLoadDashboardData200["flowMeta"]
@@ -57,15 +58,32 @@ export interface SeriesEntry {
 const percentFormatter = new Intl.NumberFormat(undefined, {
 	maximumFractionDigits: 1,
 });
+const numberFormatter = new Intl.NumberFormat();
+const NUMERIC_PREFIX_PATTERN = /^([+-]?\d+(?:\.\d+)?)(.*)$/;
 
-export function isWidgetResult(
-	data: ChartData | null | undefined,
-): data is WidgetChartData {
+function isWidgetMetric(value: unknown): value is WidgetMetric {
 	return (
-		Array.isArray(data) &&
-		data.length > 0 &&
-		Array.isArray(data[0])
+		typeof value === "object" &&
+		value != null &&
+		"value" in value &&
+		!("name" in value)
 	);
+}
+
+export function resolveWidgetMetric(
+	data: ChartData | null | undefined,
+): WidgetMetric | null {
+	if (data == null || typeof data !== "object") return null;
+	if (Array.isArray(data)) {
+		if (data.length === 0) return null;
+		const first = data[0];
+		if (Array.isArray(first)) {
+			const metric = first[0];
+			return isWidgetMetric(metric) ? metric : null;
+		}
+		return isWidgetMetric(first) ? first : null;
+	}
+	return isWidgetMetric(data) ? data : null;
 }
 
 export function isSeriesResult(
@@ -113,7 +131,9 @@ export function parseSeriesEntries(
 ): ReadonlyArray<SeriesEntry> {
 	if (rows == null || rows.length === 0) return [];
 
-	const valueKey = resolveSeriesValueKey(rows[0]!, metricKey);
+	const [firstRow] = rows;
+	if (firstRow === undefined) return [];
+	const valueKey = resolveSeriesValueKey(firstRow, metricKey);
 	if (valueKey == null) return [];
 
 	const entries: SeriesEntry[] = [];
@@ -142,7 +162,7 @@ export function bucketSeriesEntries(
 		const slice = entries.slice(start, end);
 		if (slice.length === 0) continue;
 		const peak = Math.max(...slice.map((entry) => entry.value));
-		bucketed.push({ name: slice[0]!.name, value: peak });
+		bucketed.push({ name: slice[0]?.name ?? "", value: peak });
 	}
 	return bucketed;
 }
@@ -162,14 +182,7 @@ export function resolveListTabIndex(
 }
 
 export function toFiniteNumber(
-	value:
-		| number
-		| string
-		| "NaN"
-		| "Infinity"
-		| "-Infinity"
-		| null
-		| undefined,
+	value: number | string | "NaN" | "Infinity" | "-Infinity" | null | undefined,
 ): number | null {
 	if (value == null) return null;
 	if (typeof value === "string") {
@@ -183,20 +196,25 @@ export function toFiniteNumber(
 }
 
 export function formatWidgetValue(
-	value: number | null | undefined,
+	value: string | number | null | undefined,
 	format: "number" | "percent" = "number",
 ): string {
-	if (value == null || !Number.isFinite(value)) {
-		return "—";
+	if (value == null || value === "") return "—";
+	if (typeof value === "string") {
+		const match = value.match(NUMERIC_PREFIX_PATTERN);
+		if (!match) return value;
+		const numericValue = Number(match[1]);
+		if (!Number.isFinite(numericValue)) return value;
+		const formattedNumber =
+			format === "percent"
+				? `${percentFormatter.format(numericValue)}%`
+				: numberFormatter.format(numericValue);
+		return `${formattedNumber}${match[2] ?? ""}`;
 	}
-
-	if (format === "percent") {
-		return `${percentFormatter.format(value)}%`;
-	}
-
-	if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
-	if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
-	return value.toLocaleString();
+	if (!Number.isFinite(value)) return "—";
+	return format === "percent"
+		? `${percentFormatter.format(value)}%`
+		: numberFormatter.format(value);
 }
 
 export function formatWidgetTrend(trend: number): {
@@ -208,8 +226,7 @@ export function formatWidgetTrend(trend: number): {
 		return { text: "0%", color: theme.textMuted, prefix: "" };
 	}
 	if (trend > 0) {
-		const pct =
-			trend >= 10 ? trend.toFixed(0) : percentFormatter.format(trend);
+		const pct = trend >= 10 ? trend.toFixed(0) : percentFormatter.format(trend);
 		return { text: `${pct}%`, color: theme.success, prefix: "+" };
 	}
 	const abs = Math.abs(trend);
@@ -268,7 +285,9 @@ export function seriesToMapHighlights(
 ): ReadonlyArray<MapChartHighlight> {
 	if (rows.length === 0) return [];
 
-	const valueKey = resolveSeriesValueKey(rows[0]!, metricKey);
+	const [firstRow] = rows;
+	if (firstRow === undefined) return [];
+	const valueKey = resolveSeriesValueKey(firstRow, metricKey);
 	if (valueKey == null) return [];
 
 	const values: number[] = [];
@@ -304,8 +323,7 @@ function valueToMapFillColor(
 	max: number,
 	fillColor: string,
 ): string {
-	const opacity =
-		min === max ? 1 : 0.2 + ((value - min) * 0.8) / (max - min);
+	const opacity = min === max ? 1 : 0.2 + ((value - min) * 0.8) / (max - min);
 	return blendWithBackground(fillColor, opacity);
 }
 

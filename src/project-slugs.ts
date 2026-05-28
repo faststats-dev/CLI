@@ -1,6 +1,6 @@
 import { Effect } from "effect";
-import { FastStatsApi } from "./api-client.ts";
 import type { ProjectsGetProject200 } from "./api.ts";
+import { FastStatsApi } from "./api-client.ts";
 
 export const isWebProject = (
 	project: ProjectsGetProject200,
