@@ -29,7 +29,7 @@ export interface LineAreaChartPalette {
 	readonly bgColor: string;
 }
 
-function blendHex(base: string, target: string, ratio: number): string {
+function mixHex(from: string, to: string, amount: number): string {
 	const parse = (hex: string) => {
 		const h = hex.replace("#", "");
 		return [
@@ -38,31 +38,13 @@ function blendHex(base: string, target: string, ratio: number): string {
 			Number.parseInt(h.slice(4, 6), 16),
 		] as const;
 	};
-	const [br, bg, bb] = parse(base);
-	const [tr, tg, tb] = parse(target);
-	const mix = (left: number, right: number) =>
-		Math.round(left + (right - left) * ratio)
+	const [fr, fg, fb] = parse(from);
+	const [tr, tg, tb] = parse(to);
+	const channel = (left: number, right: number) =>
+		Math.round(left + (right - left) * amount)
 			.toString(16)
 			.padStart(2, "0");
-	return `#${mix(br, tr)}${mix(bg, tg)}${mix(bb, tb)}`;
-}
-
-function compositeHex(foreground: string, background: string, alpha: number): string {
-	const parse = (hex: string) => {
-		const h = hex.replace("#", "");
-		return [
-			Number.parseInt(h.slice(0, 2), 16),
-			Number.parseInt(h.slice(2, 4), 16),
-			Number.parseInt(h.slice(4, 6), 16),
-		] as const;
-	};
-	const [fr, fg, fb] = parse(foreground);
-	const [br, bg, bb] = parse(background);
-	const a = Math.max(0, Math.min(1, alpha));
-	const mix = (left: number, right: number) =>
-		Math.round(left * a + right * (1 - a));
-	const toHex = (value: number) => value.toString(16).padStart(2, "0");
-	return `#${toHex(mix(fr, br))}${toHex(mix(fg, bg))}${toHex(mix(fb, bb))}`;
+	return `#${channel(fr, tr)}${channel(fg, tg)}${channel(fb, tb)}`;
 }
 
 export function resolveLineAreaSeriesStyle(lineColor: string): {
@@ -71,23 +53,25 @@ export function resolveLineAreaSeriesStyle(lineColor: string): {
 } {
 	return {
 		lineColor,
-		fillColor: blendHex(theme.surface, lineColor, AREA_FILL_ALPHA),
+		fillColor: mixHex(theme.surface, lineColor, AREA_FILL_ALPHA),
 	};
 }
 
 export function resolveLineAreaChartPalette(): LineAreaChartPalette {
 	return {
-		gridColor: blendHex(theme.surface, theme.border, 0.55),
+		gridColor: mixHex(theme.surface, theme.border, 0.55),
 		bgColor: theme.surface,
 	};
 }
 
 function createPixelBuffer(width: number, height: number): PixelBuffer {
-	const pixels: (Pixel | null)[][] = [];
-	for (let y = 0; y < height; y++) {
-		pixels.push(Array.from({ length: width }, () => null));
-	}
-	return { width, height, pixels };
+	return {
+		width,
+		height,
+		pixels: Array.from({ length: height }, () =>
+			Array.from({ length: width }, () => null),
+		),
+	};
 }
 
 function setPixel(
@@ -117,17 +101,15 @@ function drawLine(
 	color: string,
 	layer: number,
 ): void {
-	const startX = Math.round(x0);
-	const startY = Math.round(y0);
+	let x = Math.round(x0);
+	let y = Math.round(y0);
 	const endX = Math.round(x1);
 	const endY = Math.round(y1);
-	let dx = Math.abs(endX - startX);
-	let dy = Math.abs(endY - startY);
-	const sx = startX < endX ? 1 : -1;
-	const sy = startY < endY ? 1 : -1;
+	let dx = Math.abs(endX - x);
+	let dy = Math.abs(endY - y);
+	const sx = x < endX ? 1 : -1;
+	const sy = y < endY ? 1 : -1;
 	let err = dx - dy;
-	let x = startX;
-	let y = startY;
 
 	while (true) {
 		setPixel(buf, x, y, color, layer);
@@ -144,18 +126,17 @@ function drawLine(
 	}
 }
 
-function fillColumnArea(
+function fillColumn(
 	buf: PixelBuffer,
 	x: number,
-	y0: number,
-	y1: number,
+	yTop: number,
+	yBottom: number,
 	color: string,
-	bgColor: string,
 ): void {
 	const px = Math.round(x);
 	if (px < 0 || px >= buf.width) return;
-	const start = Math.min(Math.round(y0), Math.round(y1));
-	const end = Math.max(Math.round(y0), Math.round(y1));
+	const start = Math.min(Math.round(yTop), Math.round(yBottom));
+	const end = Math.max(Math.round(yTop), Math.round(yBottom));
 
 	for (let y = start; y <= end; y++) {
 		if (y < 0 || y >= buf.height) continue;
@@ -163,25 +144,11 @@ function fillColumnArea(
 		if (!row) continue;
 		const existing = row[px];
 		if (existing && existing.layer >= LAYER_DATA) continue;
-		const under =
-			existing?.layer === LAYER_FILL ? existing.color : bgColor;
-		row[px] = {
-			color: compositeHex(color, under, AREA_FILL_ALPHA),
-			layer: LAYER_FILL,
-		};
+		row[px] = { color, layer: LAYER_FILL };
 	}
 }
 
-function getSeriesPosition(
-	index: number,
-	pointCount: number,
-	width: number,
-): number {
-	if (pointCount <= 1) return Math.round((width - 1) / 2);
-	return Math.round((index / (pointCount - 1)) * (width - 1));
-}
-
-function getScaledY(
+function valueToY(
 	value: number,
 	min: number,
 	max: number,
@@ -189,33 +156,36 @@ function getScaledY(
 	bottom: number,
 ): number {
 	const range = max - min || 1;
-	const height = bottom - top;
-	return top + Math.round((1 - (value - min) / range) * height);
+	return Math.round(top + (1 - (value - min) / range) * (bottom - top));
 }
 
-function computeGridLines(
-	min: number,
-	max: number,
-	chartTop: number,
+function pointX(index: number, count: number, width: number): number {
+	if (count <= 1) return Math.floor((width - 1) / 2);
+	return Math.round((index / (count - 1)) * (width - 1));
+}
+
+function sampleValueAtX(
+	values: ReadonlyArray<number>,
+	x: number,
+	width: number,
+): number {
+	if (values.length === 1) return values[0]!;
+	const t = x / Math.max(width - 1, 1);
+	const index = t * (values.length - 1);
+	const left = Math.floor(index);
+	const right = Math.min(left + 1, values.length - 1);
+	const frac = index - left;
+	return values[left]! * (1 - frac) + values[right]! * frac;
+}
+
+function drawGridLines(
+	buf: PixelBuffer,
 	chartBottom: number,
-	numLines: number,
-): ReadonlyArray<{ readonly y: number; readonly price: number }> {
-	const range = max - min || 1;
-	const chartH = chartBottom - chartTop;
-	const result: Array<{ y: number; price: number }> = [];
-	for (let index = 0; index <= numLines; index++) {
-		const frac = index / numLines;
-		result.push({
-			y: chartTop + Math.round(frac * chartH),
-			price: max - frac * range,
-		});
-	}
-	return result;
-}
-
-function drawGridLines(buf: PixelBuffer, yPositions: ReadonlyArray<number>, color: string): void {
-	for (const rawY of yPositions) {
-		const y = Math.round(rawY);
+	color: string,
+	lines: number,
+): void {
+	for (let index = 0; index <= lines; index++) {
+		const y = Math.round((index / lines) * chartBottom);
 		if (y < 0 || y >= buf.height) continue;
 		const row = buf.pixels[y];
 		if (!row) continue;
@@ -239,11 +209,17 @@ function drawLineSeries(
 	if (values.length === 0) return;
 
 	for (let index = 0; index < values.length; index++) {
-		const x = getSeriesPosition(index, values.length, buf.width);
-		const y = getScaledY(values[index]!, min, max, chartTop, chartBottom);
+		const x = pointX(index, values.length, buf.width);
+		const y = valueToY(values[index]!, min, max, chartTop, chartBottom);
 		if (index < values.length - 1) {
-			const nextX = getSeriesPosition(index + 1, values.length, buf.width);
-			const nextY = getScaledY(values[index + 1]!, min, max, chartTop, chartBottom);
+			const nextX = pointX(index + 1, values.length, buf.width);
+			const nextY = valueToY(
+				values[index + 1]!,
+				min,
+				max,
+				chartTop,
+				chartBottom,
+			);
 			drawLine(buf, x, y, nextX, nextY, lineColor, LAYER_DATA);
 		} else {
 			setPixel(buf, x, y, lineColor, LAYER_DATA);
@@ -257,29 +233,18 @@ function drawAreaFill(
 	chartTop: number,
 	chartBottom: number,
 	fillColor: string,
-	bgColor: string,
 	min: number,
 	max: number,
 ): void {
-	if (values.length === 0) return;
-
-	for (let index = 0; index < values.length; index++) {
-		const x = getSeriesPosition(index, values.length, buf.width);
-		const y = getScaledY(values[index]!, min, max, chartTop, chartBottom);
-
-		fillColumnArea(buf, x, y + 1, chartBottom, fillColor, bgColor);
-
-		if (index >= values.length - 1) continue;
-
-		const nextX = getSeriesPosition(index + 1, values.length, buf.width);
-		const nextY = getScaledY(values[index + 1]!, min, max, chartTop, chartBottom);
-
-		for (let cx = Math.min(x, nextX); cx <= Math.max(x, nextX); cx++) {
-			if (cx === x || cx === nextX) continue;
-			const t = (cx - x) / Math.max(Math.abs(nextX - x), 1);
-			const interpolatedY = Math.round(y + t * (nextY - y));
-			fillColumnArea(buf, cx, interpolatedY + 1, chartBottom, fillColor, bgColor);
-		}
+	for (let x = 0; x < buf.width; x++) {
+		const y = valueToY(
+			sampleValueAtX(values, x, buf.width),
+			min,
+			max,
+			chartTop,
+			chartBottom,
+		);
+		fillColumn(buf, x, y + 1, chartBottom, fillColor);
 	}
 }
 
@@ -295,44 +260,34 @@ function renderPixelBufferToFrameBuffer(
 	for (let row = 0; row < charHeight; row++) {
 		for (let col = 0; col < charWidth; col++) {
 			let topLayer = -1;
-			const dotsByLayer = new Map<number, number>();
-			const colorByLayer = new Map<number, Map<string, number>>();
+			let pattern = 0;
+			let color: string = theme.text;
 
 			for (let dy = 0; dy < 4; dy++) {
 				for (let dx = 0; dx < 2; dx++) {
 					const px = col * 2 + dx;
 					const py = row * 4 + dy;
 					if (px >= buf.width || py >= buf.height) continue;
-					const pixel = buf.pixels[py]?.[px] ?? null;
+					const pixel = buf.pixels[py]?.[px];
 					if (!pixel) continue;
-					const bit = BRAILLE_DOT_BITS[dy]![dx]!;
-					dotsByLayer.set(pixel.layer, (dotsByLayer.get(pixel.layer) ?? 0) | bit);
-					if (!colorByLayer.has(pixel.layer)) {
-						colorByLayer.set(pixel.layer, new Map());
+					if (pixel.layer < topLayer) continue;
+					if (pixel.layer > topLayer) {
+						topLayer = pixel.layer;
+						pattern = 0;
 					}
-					const counts = colorByLayer.get(pixel.layer)!;
-					counts.set(pixel.color, (counts.get(pixel.color) ?? 0) + 1);
-					if (pixel.layer > topLayer) topLayer = pixel.layer;
+					pattern |= BRAILLE_DOT_BITS[dy]![dx]!;
+					color = pixel.color;
 				}
 			}
 
-			if (topLayer < 0) continue;
-
-			const pattern = dotsByLayer.get(topLayer) ?? 0;
 			if (pattern === 0) continue;
-
-			const topCounts = colorByLayer.get(topLayer) ?? new Map();
-			let topColor = theme.text;
-			let bestCount = 0;
-			for (const [color, count] of topCounts) {
-				if (count > bestCount) {
-					bestCount = count;
-					topColor = color;
-				}
-			}
-
-			const char = String.fromCodePoint(BRAILLE_BASE + pattern);
-			fb.frameBuffer.setCell(col, row, char, RGBA.fromHex(topColor), bgColor);
+			fb.frameBuffer.setCell(
+				col,
+				row,
+				String.fromCodePoint(BRAILLE_BASE + pattern),
+				RGBA.fromHex(color),
+				bgColor,
+			);
 		}
 	}
 }
@@ -356,9 +311,8 @@ export function drawLineAreaChart(
 	const dotHeight = Math.max(4, charHeight * 4);
 	const chartBottom = dotHeight - 1;
 	const buf = createPixelBuffer(dotWidth, dotHeight);
-	const gridLines = computeGridLines(min, max, 0, chartBottom, 3);
 
-	drawGridLines(buf, gridLines.map((line) => line.y), palette.gridColor);
+	drawGridLines(buf, chartBottom, palette.gridColor, 3);
 
 	if (area) {
 		for (const entry of series) {
@@ -368,8 +322,7 @@ export function drawLineAreaChart(
 				entry.values,
 				0,
 				chartBottom,
-				entry.lineColor,
-				palette.bgColor,
+				entry.fillColor,
 				min,
 				max,
 			);
