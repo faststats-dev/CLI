@@ -47,6 +47,9 @@ export interface ChartQueryConfigLite {
 		readonly list?: {
 			readonly selectedTabIndex?: number | null;
 		} | null;
+		readonly heatmap?: {
+			readonly showLegend?: boolean | null;
+		} | null;
 	} | null;
 }
 

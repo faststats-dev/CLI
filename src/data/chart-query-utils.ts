@@ -18,7 +18,7 @@ interface ChartSeriesDescriptor {
 	readonly label: string;
 }
 
-function getChartValueKeys(rows: SeriesRows): string[] {
+export function getChartValueKeys(rows: SeriesRows): string[] {
 	const keys = new Set<string>();
 	for (const row of rows) {
 		for (const key of Object.keys(row))
@@ -107,6 +107,18 @@ interface PreparedLineAreaSeries {
 
 export interface PreparedLineAreaChartData {
 	readonly series: ReadonlyArray<PreparedLineAreaSeries>;
+}
+
+export function getChartSeriesLabels(
+	rows: SeriesRows,
+	queryConfig: ChartQueryConfigLite | null | undefined,
+	flowMeta: ChartFlowMetaLite | null | undefined,
+): string[] {
+	return getChartSeries({
+		rows,
+		metrics: queryConfig?.metrics ?? [],
+		outputDescriptors: flowMeta?.outputs ?? [],
+	}).map((entry) => entry.label);
 }
 
 export function prepareLineAreaChartData(

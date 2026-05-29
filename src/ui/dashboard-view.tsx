@@ -16,6 +16,7 @@ import {
 	resolveMetricKey,
 	seriesToMapHighlights,
 } from "../data/chart-data.ts";
+import { HeatmapChart } from "./heatmap-chart.tsx";
 import { ListChart } from "./list-chart.tsx";
 import { MapChart } from "./map-chart.tsx";
 import { runOpenTui } from "./open-tui.ts";
@@ -35,6 +36,7 @@ const CHART_SIZES: Partial<Record<string, { w: number; h: number }>> = {
 	pie: { w: 4, h: 4 },
 	list: { w: 4, h: 6 },
 	map: { w: 6, h: 4 },
+	heatmap: { w: 6, h: 5 },
 };
 const DEFAULT_CHART_SIZE = { w: 4, h: 3 } as const;
 
@@ -546,6 +548,17 @@ function ChartContent(props: {
 					innerWidth={props.innerWidth()}
 					innerHeight={props.innerHeight()}
 					highlights={props.mapHighlights()}
+				/>
+			);
+		case "heatmap":
+			return (
+				<HeatmapChart
+					{...common()}
+					flowMeta={props.chart.flowMeta}
+					preferredChartColors={props.preferredChartColors}
+					showLegend={
+						props.chart.queryConfig?.visualOptions?.heatmap?.showLegend ?? true
+					}
 				/>
 			);
 		default:

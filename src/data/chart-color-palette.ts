@@ -189,6 +189,64 @@ export function getChartColor(palette: string[], index: number): string {
 	return palette[normalizedIndex] ?? DEFAULT_CHART_COLOR;
 }
 
+export interface RgbColor {
+	readonly r: number;
+	readonly g: number;
+	readonly b: number;
+	readonly a?: number;
+}
+
+export function parseColor(color: string): RgbColor | null {
+	const normalized = normalizeHexColor(color);
+	if (!normalized) return null;
+	return {
+		r: Number.parseInt(normalized.slice(1, 3), 16),
+		g: Number.parseInt(normalized.slice(3, 5), 16),
+		b: Number.parseInt(normalized.slice(5, 7), 16),
+	};
+}
+
+export function formatRgb(rgb: RgbColor): string {
+	if (rgb.a != null && rgb.a < 1) {
+		return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${rgb.a})`;
+	}
+	const toHex = (value: number) =>
+		Math.round(value).toString(16).padStart(2, "0");
+	return `#${toHex(rgb.r)}${toHex(rgb.g)}${toHex(rgb.b)}`.toUpperCase();
+}
+
+export function blendHexOnBackground(
+	foreground: string,
+	background: string,
+	alpha: number,
+): string {
+	const fg = parseColor(foreground);
+	const bg = parseColor(background);
+	if (!fg || !bg) return foreground;
+	const mix = (c: number, bgC: number) =>
+		Math.round(c * alpha + bgC * (1 - alpha));
+	return formatRgb({
+		r: mix(fg.r, bg.r),
+		g: mix(fg.g, bg.g),
+		b: mix(fg.b, bg.b),
+	});
+}
+
+const HEATMAP_INTENSITY_OPACITIES = [0.22, 0.38, 0.58, 0.78, 1] as const;
+
+const FALLBACK_HEATMAP_BASE = "#F97316";
+
+export function buildHeatmapIntensityFills(
+	baseColor: string,
+	background: string,
+): readonly string[] {
+	const rgb = parseColor(baseColor);
+	const base = rgb ? formatRgb(rgb) : FALLBACK_HEATMAP_BASE;
+	return HEATMAP_INTENSITY_OPACITIES.map((opacity) =>
+		opacity >= 1 ? base : blendHexOnBackground(base, background, opacity),
+	);
+}
+
 export function resolveChartPalette(
 	chartColors: readonly string[] | null | undefined,
 	preferredChartColors: readonly string[] | null | undefined,

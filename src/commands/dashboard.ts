@@ -14,7 +14,7 @@ import { runProjectsTable } from "../ui/projects-table.tsx";
 
 const DEFAULT_TIME_RANGE_MS = 7 * 24 * 60 * 60 * 1000;
 
-export const projectsCommand = Command.make("projects", {}, () =>
+export const dashboardCommand = Command.make("dashboard", {}, () =>
 	Effect.gen(function* () {
 		const api = yield* FastStatsApi;
 		const response = yield* api.ProjectsListProjects(undefined);
@@ -87,7 +87,7 @@ export const projectsCommand = Command.make("projects", {}, () =>
 			);
 		}
 	}),
-).pipe(Command.withDescription("Browse projects in the terminal UI"));
+).pipe(Command.withDescription("Browse project dashboards in the terminal UI"));
 
 function toChartLite(
 	chart: ChartsListCharts200[number],
@@ -130,6 +130,14 @@ type ApiChartQueryConfig = NonNullable<
 	ChartsListCharts200[number]["queryConfig"]
 >;
 
+function toFiniteTabIndex(
+	value: number | "NaN" | "Infinity" | "-Infinity" | null | undefined,
+): number | null {
+	if (value == null) return null;
+	const parsed = Number(value);
+	return Number.isFinite(parsed) ? parsed : null;
+}
+
 function toQueryConfigLite(
 	queryConfig: ApiChartQueryConfig | null,
 ): ChartQueryConfigLite | null {
@@ -146,6 +154,18 @@ function toQueryConfigLite(
 								showTrend: visualOptions.widget.showTrend,
 								displayMode: visualOptions.widget.displayMode,
 								valueFormat: visualOptions.widget.valueFormat,
+							}
+						: null,
+					list: visualOptions.list
+						? {
+								selectedTabIndex: toFiniteTabIndex(
+									visualOptions.list.selectedTabIndex,
+								),
+							}
+						: null,
+					heatmap: visualOptions.heatmap
+						? {
+								showLegend: visualOptions.heatmap.showLegend,
 							}
 						: null,
 				}
