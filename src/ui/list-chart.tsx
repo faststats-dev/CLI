@@ -1,3 +1,4 @@
+import type { MouseEvent, ScrollBoxRenderable } from "@opentui/core";
 import { createMemo, For, Show } from "solid-js";
 import {
 	formatWidgetValue,
@@ -33,6 +34,14 @@ export function ListChart(props: SeriesChartProps) {
 	});
 	const metricLabel = () => resolveMetricLabel(props.queryConfig);
 
+	let scrollBox: ScrollBoxRenderable | undefined;
+	const handleScroll = (event: MouseEvent) => {
+		if (!scrollBox) return;
+		if (scrollBox.scrollHeight > scrollBox.viewport.height) {
+			event.stopPropagation();
+		}
+	};
+
 	return (
 		<Show
 			when={entries().length > 0}
@@ -59,6 +68,10 @@ export function ListChart(props: SeriesChartProps) {
 					</box>
 				</Show>
 				<scrollbox
+					ref={(el) => {
+						scrollBox = el ?? undefined;
+					}}
+					onMouseScroll={handleScroll}
 					flexGrow={1}
 					flexShrink={1}
 					minHeight={0}
