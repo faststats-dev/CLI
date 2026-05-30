@@ -2,8 +2,10 @@ import { Console, Effect } from "effect";
 import { Command } from "effect/unstable/cli";
 import { FastStatsApi } from "../../api-client.ts";
 
-export const projectListCommand = Command.make("list", {}, () =>
-	Effect.gen(function* () {
+export const projectListCommand = Command.make(
+	"list",
+	{},
+	Effect.fnUntraced(function* () {
 		const api = yield* FastStatsApi;
 		const response = yield* api.ProjectsListProjects(undefined);
 

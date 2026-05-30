@@ -11,6 +11,7 @@ import {
 	truncateLabel,
 } from "../data/chart-data.ts";
 import {
+	buildHeatmapIntensityScale,
 	buildHeatmapMatrix,
 	formatHeatmapCategoryLabel,
 	formatHeatmapLabel,
@@ -18,6 +19,7 @@ import {
 	getHeatmapCellColor,
 	getHeatmapMosaicColumnCount,
 	getHeatmapMosaicItems,
+	type HeatmapIntensityScale,
 	type HeatmapLayout,
 	type HeatmapMatrix,
 	MAX_HEATMAP_COL_TICKS,
@@ -43,7 +45,7 @@ interface PreparedHeatmapChart {
 	readonly displayMatrix: HeatmapMatrix;
 	readonly layout: HeatmapLayout;
 	readonly intensityFills: readonly string[];
-	readonly cellValues: readonly number[];
+	readonly intensityScale: HeatmapIntensityScale;
 	readonly emptyColor: string;
 }
 
@@ -84,14 +86,16 @@ export function HeatmapChart(props: HeatmapChartProps) {
 			accentColor,
 			theme.surface,
 		);
-		const cellValues = displayMatrix.cells.map((cell) => cell.value);
+		const intensityScale = buildHeatmapIntensityScale(
+			displayMatrix.cells.map((cell) => cell.value),
+		);
 		const emptyColor = theme.border;
 
 		return {
 			displayMatrix,
 			layout,
 			intensityFills,
-			cellValues,
+			intensityScale,
 			emptyColor,
 		};
 	});
@@ -124,7 +128,7 @@ function HeatmapChartBodyInner(props: {
 			displayMatrix={data.displayMatrix}
 			layout={data.layout}
 			intensityFills={data.intensityFills}
-			cellValues={data.cellValues}
+			intensityScale={data.intensityScale}
 			emptyColor={data.emptyColor}
 			showLegend={props.showLegend}
 		/>
@@ -137,7 +141,7 @@ function HeatmapChartBody(props: {
 	readonly displayMatrix: HeatmapMatrix;
 	readonly layout: HeatmapLayout;
 	readonly intensityFills: readonly string[];
-	readonly cellValues: readonly number[];
+	readonly intensityScale: HeatmapIntensityScale;
 	readonly emptyColor: string;
 	readonly showLegend: boolean;
 }) {
@@ -151,7 +155,7 @@ function HeatmapChartBody(props: {
 					displayMatrix={props.displayMatrix}
 					layout={props.layout}
 					intensityFills={props.intensityFills}
-					cellValues={props.cellValues}
+					intensityScale={props.intensityScale}
 					emptyColor={props.emptyColor}
 					showLegend={props.showLegend}
 				/>
@@ -162,7 +166,7 @@ function HeatmapChartBody(props: {
 				innerHeight={props.innerHeight}
 				displayMatrix={props.displayMatrix}
 				intensityFills={props.intensityFills}
-				cellValues={props.cellValues}
+				intensityScale={props.intensityScale}
 				emptyColor={props.emptyColor}
 				showLegend={props.showLegend}
 			/>
@@ -175,7 +179,7 @@ function HeatmapMosaicChart(props: {
 	readonly innerHeight: number;
 	readonly displayMatrix: HeatmapMatrix;
 	readonly intensityFills: readonly string[];
-	readonly cellValues: readonly number[];
+	readonly intensityScale: HeatmapIntensityScale;
 	readonly emptyColor: string;
 	readonly showLegend: boolean;
 }) {
@@ -231,7 +235,7 @@ function HeatmapMosaicChart(props: {
 										getHeatmapCellColor(
 											item.value,
 											props.emptyColor,
-											props.cellValues,
+											props.intensityScale,
 											props.intensityFills,
 										);
 									return (
@@ -278,7 +282,7 @@ function HeatmapGridChart(props: {
 	readonly displayMatrix: HeatmapMatrix;
 	readonly layout: HeatmapLayout;
 	readonly intensityFills: readonly string[];
-	readonly cellValues: readonly number[];
+	readonly intensityScale: HeatmapIntensityScale;
 	readonly emptyColor: string;
 	readonly showLegend: boolean;
 }) {
@@ -395,7 +399,7 @@ function HeatmapGridChart(props: {
 											getHeatmapCellColor(
 												value(),
 												props.emptyColor,
-												props.cellValues,
+												props.intensityScale,
 												props.intensityFills,
 											);
 										return (

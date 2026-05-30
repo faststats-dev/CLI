@@ -3,8 +3,10 @@ import { Command } from "effect/unstable/cli";
 import { FastStatsApi } from "../../../api-client.ts";
 
 export const makeNetworkListCommand = (slug: string) =>
-	Command.make("list", {}, () =>
-		Effect.gen(function* () {
+	Command.make(
+		"list",
+		{},
+		Effect.fnUntraced(function* () {
 			const api = yield* FastStatsApi;
 			const rules = yield* api.NetworkRulesListNetworkRules(slug, undefined);
 

@@ -20,12 +20,12 @@ export type HeatmapMosaicItem = HeatmapCellDatum & {
 
 const SPLIT_DELIMITERS = ["|", "::", " / ", " > ", " - ", ">", "/"];
 export const MAX_HEATMAP_ROWS = 16;
-export const MAX_HEATMAP_HOUR_ROWS = 24;
+const MAX_HEATMAP_HOUR_ROWS = 24;
 export const MAX_HEATMAP_COL_TICKS = 8;
 export const MAX_HEATMAP_ROW_TICKS = 12;
 export const MAX_HEATMAP_MOSAIC_COLS = 6;
 export const HEATMAP_TRANSPOSE_COL_THRESHOLD = 10;
-export const HEATMAP_INTENSITY_LEVEL_COUNT = 5;
+const HEATMAP_INTENSITY_LEVEL_COUNT = 5;
 
 function pickDelimiter(names: readonly string[]): string | null {
 	let winner: string | null = null;
@@ -179,7 +179,7 @@ export function buildHeatmapMatrix(
 	return { cells, rowLabels, colLabels };
 }
 
-export function isHeatmapCalendarMatrix(matrix: HeatmapMatrix): boolean {
+function isHeatmapCalendarMatrix(matrix: HeatmapMatrix): boolean {
 	return (
 		matrix.rowLabels.length > 0 &&
 		matrix.rowLabels.every(isHourBasedRowLabel) &&
@@ -196,7 +196,7 @@ export function getHeatmapLayout(matrix: HeatmapMatrix): HeatmapLayout {
 	return "grid";
 }
 
-export function transposeHeatmapMatrix(matrix: HeatmapMatrix): HeatmapMatrix {
+function transposeHeatmapMatrix(matrix: HeatmapMatrix): HeatmapMatrix {
 	const cells = matrix.cells.map((cell) => ({
 		rowLabel: cell.colLabel,
 		colLabel: cell.rowLabel,
@@ -342,7 +342,7 @@ function toRangeLabel(labels: readonly string[]): string {
 	return `${first}…${last}`;
 }
 
-export function condenseHeatmapRows(
+function condenseHeatmapRows(
 	matrix: HeatmapMatrix,
 	maxRows: number,
 ): HeatmapMatrix {
@@ -426,30 +426,50 @@ export function formatHeatmapLabel(label: string): string {
 	return label;
 }
 
-export function getHeatmapIntensityLevel(
-	value: number,
+export interface HeatmapIntensityScale {
+	readonly sortedPositive: readonly number[];
+}
+
+export function buildHeatmapIntensityScale(
 	values: readonly number[],
+): HeatmapIntensityScale {
+	const sortedPositive = values
+		.filter((entry) => entry > 0 && Number.isFinite(entry))
+		.sort((a, b) => a - b);
+	return { sortedPositive };
+}
+
+function countBelow(sorted: readonly number[], value: number): number {
+	let lo = 0;
+	let hi = sorted.length;
+	while (lo < hi) {
+		const mid = (lo + hi) >> 1;
+		if ((sorted[mid] ?? 0) < value) {
+			lo = mid + 1;
+		} else {
+			hi = mid;
+		}
+	}
+	return lo;
+}
+
+function getHeatmapIntensityLevel(
+	value: number,
+	scale: HeatmapIntensityScale,
 ): number {
 	if (value <= 0 || !Number.isFinite(value)) return -1;
-	const positive = values.filter(
-		(entry) => entry > 0 && Number.isFinite(entry),
-	);
-	if (positive.length === 0) return -1;
-	if (positive.length === 1) return HEATMAP_INTENSITY_LEVEL_COUNT - 1;
-	const sorted = [...positive].sort((a, b) => a - b);
-	let below = 0;
-	for (const entry of sorted) {
-		if (entry < value) below += 1;
-	}
+	const sorted = scale.sortedPositive;
+	if (sorted.length === 0) return -1;
+	if (sorted.length === 1) return HEATMAP_INTENSITY_LEVEL_COUNT - 1;
+	const below = countBelow(sorted, value);
 	const percentile = below / (sorted.length - 1);
-	const level = Math.min(
+	return Math.min(
 		HEATMAP_INTENSITY_LEVEL_COUNT - 1,
 		Math.floor(percentile * HEATMAP_INTENSITY_LEVEL_COUNT),
 	);
-	return level;
 }
 
-export function getHeatmapIntensityFill(
+function getHeatmapIntensityFill(
 	level: number,
 	intensityFills: readonly string[],
 ): string | null {
@@ -462,10 +482,10 @@ export function getHeatmapIntensityFill(
 export function getHeatmapCellColor(
 	value: number,
 	emptyColor: string,
-	values: readonly number[],
+	scale: HeatmapIntensityScale,
 	intensityFills: readonly string[],
 ): string {
-	const level = getHeatmapIntensityLevel(value, values);
+	const level = getHeatmapIntensityLevel(value, scale);
 	return getHeatmapIntensityFill(level, intensityFills) ?? emptyColor;
 }
 

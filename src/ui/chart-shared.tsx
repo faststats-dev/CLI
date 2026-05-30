@@ -39,6 +39,7 @@ export function FrameBufferView(props: {
 	const width = createMemo(() => Math.max(1, Math.floor(props.innerWidth)));
 	const height = createMemo(() => Math.max(1, Math.floor(props.innerHeight)));
 	const [parentBox, setParentBox] = createSignal<BoxRenderable | undefined>();
+	const [frameBufferVersion, setFrameBufferVersion] = createSignal(0);
 	let frameBuffer: FrameBufferRenderable | undefined;
 
 	createEffect(() => {
@@ -59,10 +60,16 @@ export function FrameBufferView(props: {
 				height: h,
 			});
 			parent.add(frameBuffer);
+			setFrameBufferVersion((version) => version + 1);
 		}
+	});
 
-		props.draw(frameBuffer, w, h);
-		frameBuffer.requestRender();
+	createEffect(() => {
+		frameBufferVersion();
+		const fb = frameBuffer;
+		if (!fb) return;
+		props.draw(fb, fb.width, fb.height);
+		fb.requestRender();
 	});
 
 	onCleanup(() => {

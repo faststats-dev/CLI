@@ -14,8 +14,10 @@ import { runProjectsTable } from "../ui/projects-table.tsx";
 
 const DEFAULT_TIME_RANGE_MS = 7 * 24 * 60 * 60 * 1000;
 
-export const dashboardCommand = Command.make("dashboard", {}, () =>
-	Effect.gen(function* () {
+export const dashboardCommand = Command.make(
+	"dashboard",
+	{},
+	Effect.fnUntraced(function* () {
 		const api = yield* FastStatsApi;
 		const response = yield* api.ProjectsListProjects(undefined);
 

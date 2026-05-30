@@ -32,7 +32,7 @@ export type AuthStatus =
 export const DEFAULT_API_URL = "http://localhost:4000";
 export const DEFAULT_APP_URL = "http://localhost:3000";
 
-const CONFIG_DIR = join(homedir(), ".config", "faststats");
+export const CONFIG_DIR = join(homedir(), ".config", "faststats");
 export const CONFIG_PATH = join(CONFIG_DIR, "config.json");
 const SECRET_SERVICE = "dev.faststats.cli";
 const API_KEY_SECRET = "api-key";

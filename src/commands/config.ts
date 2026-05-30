@@ -18,8 +18,10 @@ const formatUrl = (value: string | undefined, fallback: string) =>
 const formatSecret = (value: string | undefined) =>
 	value ? `${maskSecret(value)} (OS secrets)` : "(not set)";
 
-const showCommand = Command.make("show", {}, () =>
-	Effect.gen(function* () {
+const showCommand = Command.make(
+	"show",
+	{},
+	Effect.fnUntraced(function* () {
 		const config = yield* loadCredentials;
 
 		yield* Console.log(`Config file: ${CONFIG_PATH}`);
@@ -44,8 +46,10 @@ const showCommand = Command.make("show", {}, () =>
 	}),
 ).pipe(Command.withDescription("Show CLI configuration"));
 
-const pathCommand = Command.make("path", {}, () =>
-	Effect.gen(function* () {
+const pathCommand = Command.make(
+	"path",
+	{},
+	Effect.fnUntraced(function* () {
 		yield* Console.log(CONFIG_PATH);
 	}),
 ).pipe(Command.withDescription("Print config file path"));
@@ -61,32 +65,33 @@ const setCommand = Command.make(
 		] as const),
 		value: Argument.string("value"),
 	},
-	({ key, value }) =>
-		Effect.gen(function* () {
-			const config = yield* loadConfig;
-			switch (key) {
-				case "api-key":
-					yield* saveApiKey(value);
-					yield* Console.log("Updated api-key in OS secrets");
-					break;
-				case "access-token":
-					yield* saveAccessToken(value);
-					yield* Console.log("Updated access-token in OS secrets");
-					break;
-				case "api-url":
-					yield* saveConfig({ ...config, apiUrl: value });
-					yield* Console.log(`Updated api-url in ${CONFIG_PATH}`);
-					break;
-				case "app-url":
-					yield* saveConfig({ ...config, appUrl: value });
-					yield* Console.log(`Updated app-url in ${CONFIG_PATH}`);
-					break;
-			}
-		}),
+	Effect.fnUntraced(function* ({ key, value }) {
+		const config = yield* loadConfig;
+		switch (key) {
+			case "api-key":
+				yield* saveApiKey(value);
+				yield* Console.log("Updated api-key in OS secrets");
+				break;
+			case "access-token":
+				yield* saveAccessToken(value);
+				yield* Console.log("Updated access-token in OS secrets");
+				break;
+			case "api-url":
+				yield* saveConfig({ ...config, apiUrl: value });
+				yield* Console.log(`Updated api-url in ${CONFIG_PATH}`);
+				break;
+			case "app-url":
+				yield* saveConfig({ ...config, appUrl: value });
+				yield* Console.log(`Updated app-url in ${CONFIG_PATH}`);
+				break;
+		}
+	}),
 ).pipe(Command.withDescription("Set a configuration value"));
 
-const initCommand = Command.make("init", {}, () =>
-	Effect.gen(function* () {
+const initCommand = Command.make(
+	"init",
+	{},
+	Effect.fnUntraced(function* () {
 		const apiKey = yield* Prompt.text({ message: "API key" });
 		const apiUrl = yield* Prompt.text({
 			message: "API URL",

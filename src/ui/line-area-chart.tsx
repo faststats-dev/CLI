@@ -12,6 +12,8 @@ export interface LineAreaChartViewProps {
 	readonly area: boolean;
 }
 
+const LINE_AREA_CHART_PALETTE = resolveLineAreaChartPalette();
+
 export function LineAreaChartView(props: LineAreaChartViewProps) {
 	return (
 		<FrameBufferView
@@ -24,7 +26,7 @@ export function LineAreaChartView(props: LineAreaChartViewProps) {
 					props.series,
 					width,
 					height,
-					resolveLineAreaChartPalette(),
+					LINE_AREA_CHART_PALETTE,
 					props.area,
 				);
 			}}

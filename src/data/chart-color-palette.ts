@@ -189,14 +189,14 @@ export function getChartColor(palette: string[], index: number): string {
 	return palette[normalizedIndex] ?? DEFAULT_CHART_COLOR;
 }
 
-export interface RgbColor {
+interface RgbColor {
 	readonly r: number;
 	readonly g: number;
 	readonly b: number;
 	readonly a?: number;
 }
 
-export function parseColor(color: string): RgbColor | null {
+function parseColor(color: string): RgbColor | null {
 	const normalized = normalizeHexColor(color);
 	if (!normalized) return null;
 	return {
@@ -206,7 +206,7 @@ export function parseColor(color: string): RgbColor | null {
 	};
 }
 
-export function formatRgb(rgb: RgbColor): string {
+function formatRgb(rgb: RgbColor): string {
 	if (rgb.a != null && rgb.a < 1) {
 		return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${rgb.a})`;
 	}

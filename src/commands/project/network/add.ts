@@ -14,25 +14,24 @@ export const makeNetworkAddCommand = (slug: string) =>
 				Flag.withDescription("Deny traffic from this IP"),
 			),
 		},
-		({ ip, allow, deny }) =>
-			Effect.gen(function* () {
-				if (allow === deny) {
-					return yield* Effect.fail(
-						new Error("Specify exactly one of --allow or --deny"),
-					);
-				}
-
-				const api = yield* FastStatsApi;
-				const rule = yield* api.NetworkRulesCreateNetworkRule(slug, {
-					payload: {
-						ipAddress: ip,
-						allowed: allow,
-					},
-				});
-
-				const action = rule.allowed ? "allow" : "deny";
-				yield* Console.log(
-					`Added ${action} rule for ${rule.ipAddress} (${rule.id})`,
+		Effect.fnUntraced(function* ({ ip, allow, deny }) {
+			if (allow === deny) {
+				return yield* Effect.fail(
+					new Error("Specify exactly one of --allow or --deny"),
 				);
-			}),
+			}
+
+			const api = yield* FastStatsApi;
+			const rule = yield* api.NetworkRulesCreateNetworkRule(slug, {
+				payload: {
+					ipAddress: ip,
+					allowed: allow,
+				},
+			});
+
+			const action = rule.allowed ? "allow" : "deny";
+			yield* Console.log(
+				`Added ${action} rule for ${rule.ipAddress} (${rule.id})`,
+			);
+		}),
 	).pipe(Command.withDescription("Add an IP network rule"));

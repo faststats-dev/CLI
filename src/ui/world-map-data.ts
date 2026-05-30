@@ -98,6 +98,7 @@ export interface RasterizedMap {
 	readonly pixels: Int32Array;
 }
 
+const RASTER_CACHE_LIMIT = 8;
 const rasterCache = new Map<string, RasterizedMap>();
 
 export function rasterizeWorld(width: number, height: number): RasterizedMap {
@@ -106,7 +107,11 @@ export function rasterizeWorld(width: number, height: number): RasterizedMap {
 	}
 	const key = `${width}x${height}`;
 	const cached = rasterCache.get(key);
-	if (cached) return cached;
+	if (cached) {
+		rasterCache.delete(key);
+		rasterCache.set(key, cached);
+		return cached;
+	}
 
 	const pixels = new Int32Array(width * height);
 
@@ -117,6 +122,10 @@ export function rasterizeWorld(width: number, height: number): RasterizedMap {
 	}
 
 	const result: RasterizedMap = { width, height, pixels };
+	if (rasterCache.size >= RASTER_CACHE_LIMIT) {
+		const oldest = rasterCache.keys().next().value;
+		if (oldest !== undefined) rasterCache.delete(oldest);
+	}
 	rasterCache.set(key, result);
 	return result;
 }

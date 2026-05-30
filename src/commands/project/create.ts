@@ -10,7 +10,8 @@ import {
 	resolveOrganizationByRef,
 	setActiveOrganization,
 } from "../../auth/organization-client.ts";
-import { validateProjectName } from "../../project-validation.ts";
+import { ProjectNameSchema } from "../../project-validation.ts";
+import { validateWithSchema } from "../../validation.ts";
 
 const CREATE_PROJECT_PERMISSION_ERROR =
 	"You don't have permission to create projects in this organization.";
@@ -128,13 +129,11 @@ export const projectCreateCommand = Command.make(
 	{
 		name: Flag.string("name").pipe(
 			Flag.withDescription("Project name"),
+			Flag.withSchema(ProjectNameSchema),
 			Flag.withFallbackPrompt(
 				Prompt.text({
 					message: "Project name",
-					validate: (value) => {
-						const error = validateProjectName(value);
-						return error ? Effect.fail(error) : Effect.succeed(value);
-					},
+					validate: validateWithSchema(ProjectNameSchema),
 				}),
 			),
 		),
@@ -157,98 +156,91 @@ export const projectCreateCommand = Command.make(
 			Flag.withDescription("Allowed hostname"),
 		),
 	},
-	({
+	Effect.fnUntraced(function* ({
 		name,
 		private: privateFlag,
 		errorTracking: errorTrackingFlag,
 		org,
 		hostname,
-	}) =>
-		Effect.gen(function* () {
-			const projectName = name.trim();
-			const nameError = validateProjectName(projectName);
-			if (nameError) {
-				return yield* Effect.fail(new Error(nameError));
-			}
+	}) {
+		yield* resolveOrganizationContext(org);
 
-			yield* resolveOrganizationContext(org);
-
-			const isPrivate = yield* promptIfAbsent(
-				privateFlag,
-				Prompt.select({
-					message: "Project visibility",
-					choices: [
-						{
-							title: "Public",
-							value: false,
-							description: "Visible on explore and embed pages",
-						},
-						{
-							title: "Private",
-							value: true,
-							description: "Only accessible to you and your team",
-						},
-					],
-				}),
-			);
-
-			const errorTrackingEnabled = yield* promptIfAbsent(
-				errorTrackingFlag,
-				Prompt.confirm({
-					message: "Enable error tracking?",
-					initial: true,
-				}),
-			);
-
-			const api = yield* FastStatsApi;
-			const allowedHostnames = Option.match(hostname, {
-				onNone: () => undefined,
-				onSome: (value) => [value],
-			});
-
-			const project = yield* api
-				.ProjectsCreateProject({
-					payload: {
-						name: projectName,
-						private: isPrivate,
-						templateId: PROJECT_CREATE_TEMPLATE_ID,
-						allowedHostnames,
+		const isPrivate = yield* promptIfAbsent(
+			privateFlag,
+			Prompt.select({
+				message: "Project visibility",
+				choices: [
+					{
+						title: "Public",
+						value: false,
+						description: "Visible on explore and embed pages",
 					},
-				})
-				.pipe(
-					Effect.catchCause((cause) =>
-						Effect.fail(new Error(formatApiError(Cause.squash(cause)))),
-					),
-				);
-
-			const updateResult = yield* Effect.result(
-				api.ProjectsUpdateProject(project.id, {
-					payload: {
-						errorTrackingEnabled,
-						webVitalsEnabled: false,
-						sessionReplaysEnabled: false,
+					{
+						title: "Private",
+						value: true,
+						description: "Only accessible to you and your team",
 					},
-				}),
-			);
-			if (updateResult._tag === "Failure") {
-				yield* Console.log(
-					`Warning: project created but feature settings could not be applied (${formatApiError(updateResult.failure)})`,
-				);
-			}
+				],
+			}),
+		);
 
-			yield* Console.log(`Created project "${project.name}"`);
-			yield* Console.log(`  slug: ${project.slug}`);
-			yield* Console.log(`  id:   ${project.id}`);
-			yield* Console.log(
-				`  visibility: ${project.private ? "private" : "public"}`,
+		const errorTrackingEnabled = yield* promptIfAbsent(
+			errorTrackingFlag,
+			Prompt.confirm({
+				message: "Enable error tracking?",
+				initial: true,
+			}),
+		);
+
+		const api = yield* FastStatsApi;
+		const allowedHostnames = Option.match(hostname, {
+			onNone: () => undefined,
+			onSome: (value) => [value],
+		});
+
+		const project = yield* api
+			.ProjectsCreateProject({
+				payload: {
+					name,
+					private: isPrivate,
+					templateId: PROJECT_CREATE_TEMPLATE_ID,
+					allowedHostnames,
+				},
+			})
+			.pipe(
+				Effect.catchCause((cause) =>
+					Effect.fail(new Error(formatApiError(Cause.squash(cause)))),
+				),
 			);
+
+		const updateResult = yield* Effect.result(
+			api.ProjectsUpdateProject(project.id, {
+				payload: {
+					errorTrackingEnabled,
+					webVitalsEnabled: false,
+					sessionReplaysEnabled: false,
+				},
+			}),
+		);
+		if (updateResult._tag === "Failure") {
 			yield* Console.log(
-				`  error tracking: ${errorTrackingEnabled ? "enabled" : "disabled"}`,
+				`Warning: project created but feature settings could not be applied (${formatApiError(updateResult.failure)})`,
 			);
-			if (project.token) {
-				yield* Console.log(`  token: ${project.token}`);
-			}
-		}),
+		}
+
+		yield* Console.log(`Created project "${project.name}"`);
+		yield* Console.log(`  slug: ${project.slug}`);
+		yield* Console.log(`  id:   ${project.id}`);
+		yield* Console.log(
+			`  visibility: ${project.private ? "private" : "public"}`,
+		);
+		yield* Console.log(
+			`  error tracking: ${errorTrackingEnabled ? "enabled" : "disabled"}`,
+		);
+		if (project.token) {
+			yield* Console.log(`  token: ${project.token}`);
+		}
+	}),
 ).pipe(
 	Command.withDescription(
 		"Create a new project (interactive prompts when flags are omitted)",

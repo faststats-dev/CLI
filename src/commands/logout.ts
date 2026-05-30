@@ -2,8 +2,10 @@ import { Console, Effect } from "effect";
 import { Command } from "effect/unstable/cli";
 import { clearStoredCredentials } from "../config.ts";
 
-export const logoutCommand = Command.make("logout", {}, () =>
-	Effect.gen(function* () {
+export const logoutCommand = Command.make(
+	"logout",
+	{},
+	Effect.fnUntraced(function* () {
 		yield* clearStoredCredentials;
 		yield* Console.log("Removed stored credentials from OS secrets.");
 

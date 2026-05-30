@@ -2,12 +2,15 @@ import { Console, Effect } from "effect";
 import { Command } from "effect/unstable/cli";
 import { FastStatsApi } from "../../api-client.ts";
 import { isWebProject } from "../../project-slugs.ts";
+import { makeDatasourceCommand } from "./datasource/index.ts";
 import { makeHostnamesCommand } from "./hostnames.ts";
 import { makeNetworkCommand } from "./network/index.ts";
 
 const makeShowCommand = (slug: string) =>
-	Command.make("show", {}, () =>
-		Effect.gen(function* () {
+	Command.make(
+		"show",
+		{},
+		Effect.fnUntraced(function* () {
 			const api = yield* FastStatsApi;
 			const project = yield* api.ProjectsGetProject(slug, undefined);
 
@@ -34,5 +37,6 @@ export const makeSlugScopedCommand = (slug: string) =>
 			makeShowCommand(slug),
 			makeNetworkCommand(slug),
 			makeHostnamesCommand(slug),
+			makeDatasourceCommand(slug),
 		]),
 	);

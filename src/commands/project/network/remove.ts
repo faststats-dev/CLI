@@ -10,10 +10,9 @@ export const makeNetworkRemoveCommand = (slug: string) =>
 				Argument.withDescription("Network rule ID"),
 			),
 		},
-		({ ruleId }) =>
-			Effect.gen(function* () {
-				const api = yield* FastStatsApi;
-				yield* api.NetworkRulesDeleteNetworkRule(slug, ruleId, undefined);
-				yield* Console.log(`Removed network rule ${ruleId}`);
-			}),
+		Effect.fnUntraced(function* ({ ruleId }) {
+			const api = yield* FastStatsApi;
+			yield* api.NetworkRulesDeleteNetworkRule(slug, ruleId, undefined);
+			yield* Console.log(`Removed network rule ${ruleId}`);
+		}),
 	).pipe(Command.withDescription("Remove an IP network rule"));

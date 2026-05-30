@@ -47,6 +47,7 @@ export function renderCategoricalBarRows(
 
 	const layout = renderCategoricalBars(entries, width, height);
 	const colors: string[] = Array.from({ length: width }, () => theme.surface);
+	const max = Math.max(...entries.map((entry) => entry.value), 1);
 
 	for (const [index, entry] of entries.entries()) {
 		const color = getChartColor([...palette], index);
@@ -56,6 +57,7 @@ export function renderCategoricalBarRows(
 			entries,
 			width,
 			layout.grid.length,
+			max,
 		);
 		for (let col = bar.start; col < bar.start + bar.width; col++)
 			colors[col] = color;
@@ -127,9 +129,10 @@ function renderCategoricalBars(
 	const grid = Array.from({ length: plotRows }, () =>
 		Array.from({ length: width }, () => " "),
 	);
+	const max = Math.max(...entries.map((entry) => entry.value), 1);
 
 	for (const [index, entry] of entries.entries()) {
-		const bar = barGeometry(index, entry.value, entries, width, plotRows);
+		const bar = barGeometry(index, entry.value, entries, width, plotRows, max);
 		for (let row = 0; row < bar.height; row++) {
 			for (let col = bar.start; col < bar.start + bar.width; col++) {
 				const line = grid[plotRows - 1 - row];
@@ -147,8 +150,8 @@ function barGeometry(
 	entries: ReadonlyArray<SeriesEntry>,
 	width: number,
 	plotRows: number,
+	max: number,
 ): BarGeometry {
-	const max = Math.max(...entries.map((entry) => entry.value), 1);
 	const slotStart = Math.floor((index * width) / entries.length);
 	const slotEnd = Math.floor(((index + 1) * width) / entries.length);
 	const slotWidth = Math.max(1, slotEnd - slotStart);

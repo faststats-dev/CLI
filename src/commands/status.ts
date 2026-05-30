@@ -24,8 +24,10 @@ const formatAuthStatus = (status: AuthStatus): string => {
 	return `logged in (${METHOD_LABEL[status.method]}, ${SOURCE_LABEL[status.source]})`;
 };
 
-export const statusCommand = Command.make("status", {}, () =>
-	Effect.gen(function* () {
+export const statusCommand = Command.make(
+	"status",
+	{},
+	Effect.fnUntraced(function* () {
 		const auth = yield* loadAuthStatus;
 		const config = yield* loadConfig;
 		const { apiUrl, appUrl } = resolveCredentials(config);

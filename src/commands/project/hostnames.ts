@@ -4,8 +4,10 @@ import { FastStatsApi } from "../../api-client.ts";
 import { isWebProject } from "../../project-slugs.ts";
 
 export const makeHostnamesCommand = (slug: string) => {
-	const listCommand = Command.make("list", {}, () =>
-		Effect.gen(function* () {
+	const listCommand = Command.make(
+		"list",
+		{},
+		Effect.fnUntraced(function* () {
 			const api = yield* FastStatsApi;
 			const project = yield* api.ProjectsGetProject(slug, undefined);
 
@@ -34,30 +36,29 @@ export const makeHostnamesCommand = (slug: string) => {
 				Argument.withDescription("Allowed hostnames"),
 			),
 		},
-		({ hostnames }) =>
-			Effect.gen(function* () {
-				const api = yield* FastStatsApi;
-				const existing = yield* api.ProjectsGetProject(slug, undefined);
+		Effect.fnUntraced(function* ({ hostnames }) {
+			const api = yield* FastStatsApi;
+			const existing = yield* api.ProjectsGetProject(slug, undefined);
 
-				if (!isWebProject(existing)) {
-					yield* Console.log("Hostnames are only available for web projects.");
-					return;
-				}
+			if (!isWebProject(existing)) {
+				yield* Console.log("Hostnames are only available for web projects.");
+				return;
+			}
 
-				const updated = yield* api.ProjectsUpdateProject(existing.id, {
-					payload: {
-						allowedHostnames: hostnames,
-					},
-				});
+			const updated = yield* api.ProjectsUpdateProject(existing.id, {
+				payload: {
+					allowedHostnames: hostnames,
+				},
+			});
 
-				yield* Console.log(`Updated allowed hostnames for ${updated.slug}:`);
-				const list = isWebProject(updated)
-					? (updated.allowedHostnames ?? hostnames)
-					: hostnames;
-				for (const hostname of list) {
-					yield* Console.log(`  ${hostname}`);
-				}
-			}),
+			yield* Console.log(`Updated allowed hostnames for ${updated.slug}:`);
+			const list = isWebProject(updated)
+				? (updated.allowedHostnames ?? hostnames)
+				: hostnames;
+			for (const hostname of list) {
+				yield* Console.log(`  ${hostname}`);
+			}
+		}),
 	).pipe(Command.withDescription("Set allowed hostnames"));
 
 	return Command.make("hostnames", {}).pipe(

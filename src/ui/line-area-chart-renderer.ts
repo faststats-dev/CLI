@@ -5,17 +5,14 @@ import { theme } from "./theme.ts";
 const LAYER_GRID = 0;
 const LAYER_FILL = 1;
 const LAYER_DATA = 2;
+const LAYER_EMPTY = -1;
 const AREA_FILL_ALPHA = 0.18;
-
-interface Pixel {
-	readonly color: string;
-	readonly layer: number;
-}
 
 interface PixelBuffer {
 	readonly width: number;
 	readonly height: number;
-	readonly pixels: (Pixel | null)[][];
+	readonly color: (string | null)[];
+	readonly layer: Int8Array;
 }
 
 export interface LineAreaChartSeriesStyle {
@@ -64,14 +61,26 @@ export function resolveLineAreaChartPalette(): LineAreaChartPalette {
 	};
 }
 
-function createPixelBuffer(width: number, height: number): PixelBuffer {
-	return {
+let pooledBuffer: PixelBuffer | null = null;
+
+function getPixelBuffer(width: number, height: number): PixelBuffer {
+	if (
+		pooledBuffer &&
+		pooledBuffer.width === width &&
+		pooledBuffer.height === height
+	) {
+		pooledBuffer.color.fill(null);
+		pooledBuffer.layer.fill(LAYER_EMPTY);
+		return pooledBuffer;
+	}
+	const size = width * height;
+	pooledBuffer = {
 		width,
 		height,
-		pixels: Array.from({ length: height }, () =>
-			Array.from({ length: width }, () => null),
-		),
+		color: new Array<string | null>(size).fill(null),
+		layer: new Int8Array(size).fill(LAYER_EMPTY),
 	};
+	return pooledBuffer;
 }
 
 function setPixel(
@@ -84,11 +93,11 @@ function setPixel(
 	const px = Math.round(x);
 	const py = Math.round(y);
 	if (px < 0 || px >= buf.width || py < 0 || py >= buf.height) return;
-	const row = buf.pixels[py];
-	if (!row) return;
-	const existing = row[px];
-	if (!existing || layer >= existing.layer) {
-		row[px] = { color, layer };
+	const idx = py * buf.width + px;
+	const existing = buf.layer[idx] ?? LAYER_EMPTY;
+	if (existing < 0 || layer >= existing) {
+		buf.color[idx] = color;
+		buf.layer[idx] = layer;
 	}
 }
 
@@ -140,11 +149,10 @@ function fillColumn(
 
 	for (let y = start; y <= end; y++) {
 		if (y < 0 || y >= buf.height) continue;
-		const row = buf.pixels[y];
-		if (!row) continue;
-		const existing = row[px];
-		if (existing && existing.layer >= LAYER_DATA) continue;
-		row[px] = { color, layer: LAYER_FILL };
+		const idx = y * buf.width + px;
+		if ((buf.layer[idx] ?? LAYER_EMPTY) >= LAYER_DATA) continue;
+		buf.color[idx] = color;
+		buf.layer[idx] = LAYER_FILL;
 	}
 }
 
@@ -187,10 +195,9 @@ function drawGridLines(
 	for (let index = 0; index <= lines; index++) {
 		const y = Math.round((index / lines) * chartBottom);
 		if (y < 0 || y >= buf.height) continue;
-		const row = buf.pixels[y];
-		if (!row) continue;
+		const rowBase = y * buf.width;
 		for (let x = 0; x < buf.width; x++) {
-			if (x % 6 === 0 && !row[x]) {
+			if (x % 6 === 0 && (buf.layer[rowBase + x] ?? LAYER_EMPTY) < 0) {
 				setPixel(buf, x, y, color, LAYER_GRID);
 			}
 		}
@@ -266,15 +273,16 @@ function renderPixelBufferToFrameBuffer(
 					const px = col * 2 + dx;
 					const py = row * 4 + dy;
 					if (px >= buf.width || py >= buf.height) continue;
-					const pixel = buf.pixels[py]?.[px];
-					if (!pixel) continue;
-					if (pixel.layer < topLayer) continue;
-					if (pixel.layer > topLayer) {
-						topLayer = pixel.layer;
+					const idx = py * buf.width + px;
+					const pixelLayer = buf.layer[idx] ?? LAYER_EMPTY;
+					if (pixelLayer < 0) continue;
+					if (pixelLayer < topLayer) continue;
+					if (pixelLayer > topLayer) {
+						topLayer = pixelLayer;
 						pattern = 0;
 					}
 					pattern |= BRAILLE_DOT_BITS[dy]?.[dx] ?? 0;
-					color = pixel.color;
+					color = buf.color[idx] ?? color;
 				}
 			}
 
@@ -308,7 +316,7 @@ export function drawLineAreaChart(
 	const dotWidth = Math.max(2, charWidth * 2);
 	const dotHeight = Math.max(4, charHeight * 4);
 	const chartBottom = dotHeight - 1;
-	const buf = createPixelBuffer(dotWidth, dotHeight);
+	const buf = getPixelBuffer(dotWidth, dotHeight);
 
 	drawGridLines(buf, chartBottom, palette.gridColor, 3);
 
