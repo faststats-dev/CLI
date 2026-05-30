@@ -1,26 +1,35 @@
-import { Cause, Console, Effect, Option, Record } from "effect";
+import { Console, Effect, Option, Record } from "effect";
+import { Prompt } from "effect/unstable/cli";
 import type { DataSourceRecord } from "../../../api.ts";
-
-const formatDataSourceError = (error: unknown): string => {
-	if (
-		typeof error === "object" &&
-		error !== null &&
-		"message" in error &&
-		typeof error.message === "string" &&
-		error.message.length > 0
-	) {
-		return error.message;
-	}
-	if (error instanceof Error && error.message) {
-		return error.message;
-	}
-	return "Data source request failed";
-};
+import { withApiError } from "../../../command-helpers.ts";
 
 export const withDataSourceError = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
-	Effect.catchCause(effect, (cause) =>
-		Effect.fail(new Error(formatDataSourceError(Cause.squash(cause)))),
-	);
+	withApiError(effect, "Data source request failed");
+
+export const resolveDataSourceTarget = (
+	dataSources: ReadonlyArray<DataSourceRecord>,
+	target: Option.Option<string>,
+	action: string,
+) =>
+	Option.match(target, {
+		onSome: (ref) => {
+			const match = dataSources.find(
+				(item) => item.id === ref || item.referenceId === ref,
+			);
+			return match
+				? Effect.succeed(match)
+				: Effect.fail(new Error(`Unknown data source "${ref}".`));
+		},
+		onNone: () =>
+			Prompt.select({
+				message: `Select a data source to ${action}`,
+				choices: dataSources.map((item) => ({
+					title: item.name,
+					value: item,
+					description: item.referenceId,
+				})),
+			}),
+	});
 
 export const logDataSource = (action: string, record: DataSourceRecord) =>
 	Console.log(

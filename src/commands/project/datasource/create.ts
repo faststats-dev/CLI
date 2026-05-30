@@ -1,18 +1,13 @@
 import { Effect, Option } from "effect";
 import { Command, Flag, Prompt } from "effect/unstable/cli";
 import { FastStatsApi } from "../../../api-client.ts";
+import { promptIfAbsent } from "../../../command-helpers.ts";
 import {
 	DataSourceNameSchema,
 	ReferenceIdSchema,
 } from "../../../datasource-validation.ts";
 import { validateWithSchema } from "../../../validation.ts";
 import { logDataSource, unwrapFlags, withDataSourceError } from "./shared.ts";
-
-const promptIfAbsent = <A>(value: Option.Option<A>, prompt: Prompt.Prompt<A>) =>
-	Option.match(value, {
-		onNone: () => prompt,
-		onSome: Effect.succeed,
-	});
 
 export const makeDatasourceCreateCommand = (slug: string) =>
 	Command.make(

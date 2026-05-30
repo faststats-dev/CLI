@@ -10,6 +10,10 @@ import {
 	resolveOrganizationByRef,
 	setActiveOrganization,
 } from "../../auth/organization-client.ts";
+import {
+	formatApiErrorMessage,
+	promptIfAbsent,
+} from "../../command-helpers.ts";
 import { ProjectNameSchema } from "../../project-validation.ts";
 import { validateWithSchema } from "../../validation.ts";
 
@@ -18,30 +22,15 @@ const CREATE_PROJECT_PERMISSION_ERROR =
 
 const PROJECT_CREATE_TEMPLATE_ID = "minecraft-plugin";
 
-const promptIfAbsent = <A>(value: Option.Option<A>, prompt: Prompt.Prompt<A>) =>
-	Option.match(value, {
-		onNone: () => prompt,
-		onSome: Effect.succeed,
-	});
-
-const formatApiError = (error: unknown): string => {
-	if (
-		typeof error === "object" &&
-		error !== null &&
-		"_tag" in error &&
-		error._tag === "ForbiddenError" &&
-		"message" in error &&
-		typeof error.message === "string"
-	) {
-		return error.message === "Insufficient permissions"
-			? CREATE_PROJECT_PERMISSION_ERROR
-			: error.message;
-	}
-	if (error instanceof Error && error.message) {
-		return error.message;
-	}
-	return "Failed to create project";
-};
+const formatApiError = (error: unknown): string =>
+	typeof error === "object" &&
+	error !== null &&
+	"_tag" in error &&
+	error._tag === "ForbiddenError" &&
+	"message" in error &&
+	error.message === "Insufficient permissions"
+		? CREATE_PROJECT_PERMISSION_ERROR
+		: formatApiErrorMessage(error, "Failed to create project");
 
 const resolveInteractiveOrganization = (
 	authBaseUrl: string,

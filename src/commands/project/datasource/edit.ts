@@ -1,4 +1,4 @@
-import { Console, Effect, Option } from "effect";
+import { Console, Effect } from "effect";
 import { Argument, Command, Flag, Prompt } from "effect/unstable/cli";
 import type { DataSourceRecord } from "../../../api.ts";
 import { FastStatsApi } from "../../../api-client.ts";
@@ -7,7 +7,12 @@ import {
 	ReferenceIdSchema,
 } from "../../../datasource-validation.ts";
 import { validateWithSchema } from "../../../validation.ts";
-import { logDataSource, unwrapFlags, withDataSourceError } from "./shared.ts";
+import {
+	logDataSource,
+	resolveDataSourceTarget,
+	unwrapFlags,
+	withDataSourceError,
+} from "./shared.ts";
 
 type DataType = "number" | "string" | "boolean";
 type MetricShape = "scalar" | "array" | "map";
@@ -140,25 +145,11 @@ export const makeDatasourceEditCommand = (slug: string) =>
 				return;
 			}
 
-			const current = yield* Option.match(params.target, {
-				onSome: (ref) => {
-					const match = dataSources.find(
-						(item) => item.id === ref || item.referenceId === ref,
-					);
-					return match
-						? Effect.succeed(match)
-						: Effect.fail(new Error(`Unknown data source "${ref}".`));
-				},
-				onNone: () =>
-					Prompt.select({
-						message: "Select a data source to edit",
-						choices: dataSources.map((item) => ({
-							title: item.name,
-							value: item,
-							description: item.referenceId,
-						})),
-					}),
-			});
+			const current = yield* resolveDataSourceTarget(
+				dataSources,
+				params.target,
+				"edit",
+			);
 
 			const flags = unwrapFlags({
 				name: params.name,

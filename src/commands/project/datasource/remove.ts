@@ -1,6 +1,7 @@
-import { Console, Effect, Option } from "effect";
-import { Argument, Command, Prompt } from "effect/unstable/cli";
+import { Console, Effect } from "effect";
+import { Argument, Command } from "effect/unstable/cli";
 import { FastStatsApi } from "../../../api-client.ts";
+import { resolveDataSourceTarget } from "./shared.ts";
 
 export const makeDatasourceRemoveCommand = (slug: string) =>
 	Command.make(
@@ -23,25 +24,11 @@ export const makeDatasourceRemoveCommand = (slug: string) =>
 				return;
 			}
 
-			const dataSource = yield* Option.match(target, {
-				onSome: (ref) => {
-					const match = dataSources.find(
-						(item) => item.id === ref || item.referenceId === ref,
-					);
-					return match
-						? Effect.succeed(match)
-						: Effect.fail(new Error(`Unknown data source "${ref}".`));
-				},
-				onNone: () =>
-					Prompt.select({
-						message: "Select a data source to remove",
-						choices: dataSources.map((item) => ({
-							title: item.name,
-							value: item,
-							description: item.referenceId,
-						})),
-					}),
-			});
+			const dataSource = yield* resolveDataSourceTarget(
+				dataSources,
+				target,
+				"remove",
+			);
 
 			yield* api.DataSourcesDeleteDataSource(slug, dataSource.id, undefined);
 			yield* Console.log(

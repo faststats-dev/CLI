@@ -15,10 +15,12 @@ export const makeNetworkListCommand = (slug: string) =>
 				return;
 			}
 
-			yield* Console.log("ID\tIP\t\tACTION");
-			for (const rule of rules) {
-				const action = rule.allowed ? "allow" : "deny";
-				yield* Console.log(`${rule.id}\t${rule.ipAddress}\t${action}`);
-			}
+			yield* Console.table(
+				rules.map((rule) => ({
+					ID: rule.id,
+					IP: rule.ipAddress,
+					ACTION: rule.allowed ? "allow" : "deny",
+				})),
+			);
 		}),
 	).pipe(Command.withDescription("List IP network rules"));
