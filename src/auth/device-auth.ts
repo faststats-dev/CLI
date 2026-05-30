@@ -28,11 +28,6 @@ class DeviceAuthError extends Error {
 	}
 }
 
-const sleep = (seconds: number) =>
-	Effect.promise(
-		() => new Promise((resolve) => setTimeout(resolve, seconds * 1000)),
-	);
-
 const postJson = <T>(url: string, body: unknown, allowError = false) =>
 	Effect.tryPromise({
 		try: async () => {
@@ -87,7 +82,7 @@ const pollForToken = (
 		let pollingInterval = initialInterval;
 
 		while (true) {
-			yield* sleep(pollingInterval);
+			yield* Effect.sleep(pollingInterval * 1000);
 			const response = yield* postJson<DeviceTokenResponse>(
 				`${authBaseUrl}/device/token`,
 				{
