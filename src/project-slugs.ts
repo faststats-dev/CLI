@@ -18,7 +18,7 @@ export const isWebProject = (
 ): project is Extract<ProjectsGetProject200, { allowedHostnames: unknown }> =>
 	"allowedHostnames" in project;
 
-export const listProjectSlugs = Effect.gen(function* () {
+const listProjectSlugs = Effect.gen(function* () {
 	const api = yield* FastStatsApi;
 	const response = yield* api.ProjectsListProjects(undefined);
 	return response.items.map((item) => item.slug);

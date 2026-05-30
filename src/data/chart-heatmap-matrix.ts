@@ -1,6 +1,6 @@
 import type { SeriesRows } from "./chart-data.ts";
 
-export type HeatmapCellDatum = {
+type HeatmapCellDatum = {
 	rowLabel: string;
 	colLabel: string;
 	value: number;
@@ -23,8 +23,8 @@ export const MAX_HEATMAP_ROWS = 16;
 const MAX_HEATMAP_HOUR_ROWS = 24;
 export const MAX_HEATMAP_COL_TICKS = 8;
 export const MAX_HEATMAP_ROW_TICKS = 12;
-export const MAX_HEATMAP_MOSAIC_COLS = 6;
-export const HEATMAP_TRANSPOSE_COL_THRESHOLD = 10;
+const MAX_HEATMAP_MOSAIC_COLS = 6;
+const HEATMAP_TRANSPOSE_COL_THRESHOLD = 10;
 const HEATMAP_INTENSITY_LEVEL_COUNT = 5;
 
 function pickDelimiter(names: readonly string[]): string | null {
@@ -187,7 +187,7 @@ function isHeatmapCalendarMatrix(matrix: HeatmapMatrix): boolean {
 	);
 }
 
-export function getHeatmapLayout(matrix: HeatmapMatrix): HeatmapLayout {
+function getHeatmapLayout(matrix: HeatmapMatrix): HeatmapLayout {
 	if (matrix.cells.length === 0) return "grid";
 	if (isHeatmapCalendarMatrix(matrix)) return "calendar";
 	if (matrix.rowLabels.length === 1 && matrix.colLabels.length > 1) {

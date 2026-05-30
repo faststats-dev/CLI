@@ -215,7 +215,7 @@ function formatRgb(rgb: RgbColor): string {
 	return `#${toHex(rgb.r)}${toHex(rgb.g)}${toHex(rgb.b)}`.toUpperCase();
 }
 
-export function blendHexOnBackground(
+function blendHexOnBackground(
 	foreground: string,
 	background: string,
 	alpha: number,
