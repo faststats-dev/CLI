@@ -141,7 +141,7 @@ export function parseSeriesEntries(
 
 	const entries: SeriesEntry[] = [];
 	for (const row of rows) {
-		const value = toFiniteNumber(row[valueKey]);
+		const value = Number(row[valueKey]);
 		if (value == null) continue;
 		entries.push({ name: row.name, value });
 	}
@@ -182,20 +182,6 @@ export function resolveListTabIndex(
 ): number {
 	const saved = queryConfig?.visualOptions?.list?.selectedTabIndex ?? 0;
 	return saved >= 0 ? saved : 0;
-}
-
-export function toFiniteNumber(
-	value: number | string | "NaN" | "Infinity" | "-Infinity" | null | undefined,
-): number | null {
-	if (value == null) return null;
-	if (typeof value === "string") {
-		const parsed = Number(value);
-		return Number.isFinite(parsed) ? parsed : null;
-	}
-	if (typeof value !== "number" || !Number.isFinite(value)) {
-		return null;
-	}
-	return value;
 }
 
 export function formatWidgetValue(
@@ -258,17 +244,17 @@ function resolveSeriesValueKey(
 	row: { readonly [x: string]: string | number },
 	preferredKey: string | null,
 ): string | null {
-	if ("value" in row && toFiniteNumber(row.value) != null) {
+	if ("value" in row && Number(row.value) != null) {
 		return "value";
 	}
 	if (preferredKey != null) {
-		if (toFiniteNumber(row[preferredKey]) != null) {
+		if (Number(row[preferredKey]) != null) {
 			return preferredKey;
 		}
 	}
 	for (const [key, value] of Object.entries(row)) {
 		if (key === "name") continue;
-		if (toFiniteNumber(value) != null) return key;
+		if (Number(value) != null) return key;
 	}
 	return null;
 }
@@ -298,7 +284,7 @@ export function seriesToMapHighlights(
 
 	for (const row of rows) {
 		const raw = row[valueKey];
-		const value = toFiniteNumber(raw);
+		const value = Number(raw);
 		if (value == null) continue;
 		values.push(value);
 		entries.push({ country: row.name, value });

@@ -6,7 +6,6 @@ import {
 	formatWidgetTrend,
 	formatWidgetValue,
 	resolveWidgetMetric,
-	toFiniteNumber,
 } from "../data/chart-data.ts";
 import { theme } from "./theme.ts";
 
@@ -31,8 +30,8 @@ export function WidgetChart(props: WidgetChartProps) {
 	);
 
 	const trendInfo = createMemo(() => {
-		const trend = toFiniteNumber(metric()?.trend) ?? 0;
-		return formatWidgetTrend(trend);
+		const trend = metric()?.trend ?? 0;
+		return formatWidgetTrend(Number(trend));
 	});
 
 	const compact = () =>

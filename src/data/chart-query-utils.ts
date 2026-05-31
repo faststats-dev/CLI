@@ -4,11 +4,7 @@ import type {
 	SeriesEntry,
 	SeriesRows,
 } from "./chart-data.ts";
-import {
-	parseSeriesEntries,
-	resolveMetricKey,
-	toFiniteNumber,
-} from "./chart-data.ts";
+import { parseSeriesEntries, resolveMetricKey } from "./chart-data.ts";
 
 const VALUE_KEY_RE = /^value_(\d+)$/;
 const SERIES_KEY_RE = /^series_(\d+)$/;
@@ -89,7 +85,7 @@ function pivotScalarMultiOutputToCategories({
 	const [sourceRow] = rows;
 	if (sourceRow === undefined) return null;
 	return series.flatMap((entry) => {
-		const value = toFiniteNumber(sourceRow[entry.dataKey]);
+		const value = Number(sourceRow[entry.dataKey]);
 		return value == null ? [] : [{ name: entry.label, value, value_0: value }];
 	});
 }
@@ -140,7 +136,7 @@ export function prepareLineAreaChartData(
 	return {
 		series: descriptors.map(({ dataKey, label }) => ({
 			label,
-			values: rows.map((row) => toFiniteNumber(row[dataKey]) ?? 0),
+			values: rows.map((row) => Number(row[dataKey]) ?? 0),
 		})),
 	};
 }
