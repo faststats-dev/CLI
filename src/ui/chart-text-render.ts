@@ -195,13 +195,20 @@ function renderTimeSeriesBarLines(
 		Array.from({ length: width }, () => " "),
 	);
 
-	for (let col = 0; col < data.length; col++) {
-		const entry = data[col];
+	for (let index = 0; index < data.length; index++) {
+		const entry = data[index];
 		if (!entry) continue;
+		const slotStart = Math.floor((index * width) / data.length);
+		const slotEnd = Math.max(
+			slotStart + 1,
+			Math.floor(((index + 1) * width) / data.length),
+		);
 		const barHeight = Math.max(1, Math.round((entry.value / max) * plotRows));
 		for (let row = 0; row < barHeight; row++) {
 			const line = grid[plotRows - 1 - row];
-			if (line) line[col] = "█";
+			if (!line) continue;
+			for (let col = slotStart; col < slotEnd && col < width; col++)
+				line[col] = "█";
 		}
 	}
 
