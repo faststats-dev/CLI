@@ -210,13 +210,6 @@ export function formatWidgetTrend(trend: number): {
 	return { text: `${pct}%`, color: theme.danger, prefix: "" };
 }
 
-export function resolveMetricLabel(
-	queryConfig: ChartQueryConfig | null | undefined,
-	fallback = "Value",
-): string {
-	return resolveMetricKey(queryConfig) ?? fallback;
-}
-
 export function resolveMetricKey(
 	queryConfig: ChartQueryConfig | null | undefined,
 ): string | null {

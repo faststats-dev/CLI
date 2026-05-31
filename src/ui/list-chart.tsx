@@ -5,7 +5,6 @@ import {
 	parseSeriesEntries,
 	resolveListTabIndex,
 	resolveMetricKey,
-	resolveMetricLabel,
 	resolveSeriesRows,
 	truncateLabel,
 } from "../data/chart-data.ts";
@@ -32,7 +31,7 @@ export function ListChart(props: SeriesChartProps) {
 		);
 		return Math.max(5, ...widths, 5);
 	});
-	const metricLabel = () => resolveMetricLabel(props.queryConfig);
+	const metricLabel = () => resolveMetricKey(props.queryConfig) ?? "Value";
 
 	let scrollBox: ScrollBoxRenderable | undefined;
 	const handleScroll = (event: MouseEvent) => {

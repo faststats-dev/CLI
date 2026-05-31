@@ -5,7 +5,6 @@ import type { ChartData } from "../data/chart-data.ts";
 import type { Project } from "../data/project.ts";
 import {
 	type DashboardChart,
-	type DashboardLite,
 	runDashboardView,
 } from "../ui/dashboard-view.tsx";
 import { runProjectsTable } from "../ui/projects-table.tsx";
@@ -44,14 +43,6 @@ export const dashboardCommand = Command.make(
 				project.id,
 				undefined,
 			);
-			const dashboardLite: ReadonlyArray<DashboardLite> = dashboards.map(
-				(d) => ({
-					id: d.id,
-					name: d.name,
-					isDefault: d.isDefault,
-				}),
-			);
-
 			const loadDashboard = (dashboardId: string) =>
 				Effect.gen(function* () {
 					const charts = yield* api.ChartsListCharts(project.id, {
@@ -88,7 +79,7 @@ export const dashboardCommand = Command.make(
 					projectName: project.name,
 					projectSlug: project.slug,
 					preferredChartColors: project.preferredChartColors,
-					dashboards: dashboardLite,
+					dashboards,
 					loadDashboard,
 				}),
 			);

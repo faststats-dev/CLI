@@ -8,7 +8,7 @@ import {
 	onCleanup,
 	Show,
 } from "solid-js";
-import type { ChartsListCharts200 } from "../api.ts";
+import type { ChartsListCharts200, DashboardRecord } from "../api.ts";
 import {
 	type ChartData,
 	type ChartFlowMetaLite,
@@ -52,28 +52,7 @@ const CHART_GLYPH: Record<string, string> = {
 	radar: "◈",
 };
 
-function getChartSize(chartType: string): { w: number; h: number } {
-	return CHART_SIZES[chartType] ?? DEFAULT_CHART_SIZE;
-}
-
-export interface DashboardLite {
-	readonly id: string;
-	readonly name: string;
-	readonly isDefault: boolean;
-}
-
-interface GridPosition {
-	readonly x: number;
-	readonly y: number;
-	readonly w: number;
-	readonly h: number;
-}
-
-type ChartListItem = ChartsListCharts200[number];
-
-type ChartGridPosition = NonNullable<ChartListItem["position"]>;
-
-export type DashboardChart = ChartListItem & {
+export type DashboardChart = ChartsListCharts200[number] & {
 	readonly data: ChartData | null;
 	readonly flowMeta: ChartFlowMetaLite | null;
 };
@@ -82,7 +61,7 @@ export interface RunDashboardViewOptions {
 	readonly projectName: string;
 	readonly projectSlug: string;
 	readonly preferredChartColors: ReadonlyArray<string> | null;
-	readonly dashboards: ReadonlyArray<DashboardLite>;
+	readonly dashboards: ReadonlyArray<DashboardRecord>;
 	readonly loadDashboard: (
 		dashboardId: string,
 	) => Promise<ReadonlyArray<DashboardChart>>;
@@ -255,7 +234,7 @@ function Header(props: { title: string; subtitle: string }) {
 }
 
 function Tabs(props: {
-	dashboards: ReadonlyArray<DashboardLite>;
+	dashboards: ReadonlyArray<DashboardRecord>;
 	currentIndex: number;
 }) {
 	return (
@@ -339,7 +318,7 @@ function DashboardGrid(props: {
 			Math.min(ROW_HEIGHT_MAX, Math.round(cellWidth() * ROW_HEIGHT_RATIO)),
 		),
 	);
-	const placedCharts = createMemo(() => placeCharts(props.charts));
+	const placedCharts = createMemo(() => layoutCharts(props.charts));
 	const gridHeight = createMemo(() => {
 		const items = placedCharts();
 		if (items.length === 0) return rowHeight();
@@ -386,7 +365,19 @@ function DashboardGrid(props: {
 	});
 
 	return (
-		<Show when={props.charts.length > 0} fallback={<EmptyDashboard />}>
+		<Show
+			when={props.charts.length > 0}
+			fallback={
+				<box
+					flexGrow={1}
+					marginY={1}
+					alignItems="center"
+					justifyContent="center"
+				>
+					<text fg={theme.textMuted}>This dashboard has no charts yet.</text>
+				</box>
+			}
+		>
 			<scrollbox
 				ref={(el) => {
 					scrollBox = el ?? undefined;
@@ -427,7 +418,12 @@ function DashboardGrid(props: {
 
 function ChartBox(props: {
 	chart: DashboardChart;
-	pos: GridPosition;
+	pos: {
+		readonly x: number;
+		readonly y: number;
+		readonly w: number;
+		readonly h: number;
+	};
 	cellWidth: number;
 	rowHeight: number;
 	accent: string;
@@ -493,7 +489,7 @@ function ChartContent(props: {
 	preferredChartColors: ReadonlyArray<string> | null;
 	mapHighlights: () => ReturnType<typeof seriesToMapHighlights>;
 }) {
-	const common = () => ({
+	const seriesProps = () => ({
 		data: props.chart.data,
 		queryConfig: props.chart.queryConfig,
 		accent: props.accent,
@@ -503,13 +499,13 @@ function ChartContent(props: {
 
 	switch (props.chart.chartType) {
 		case "widget":
-			return <WidgetChart {...common()} />;
+			return <WidgetChart {...seriesProps()} />;
 		case "list":
-			return <ListChart {...common()} />;
+			return <ListChart {...seriesProps()} />;
 		case "bar":
 			return (
 				<BarChart
-					{...common()}
+					{...seriesProps()}
 					flowMeta={props.chart.flowMeta}
 					preferredChartColors={props.preferredChartColors}
 				/>
@@ -517,14 +513,14 @@ function ChartContent(props: {
 		case "pie":
 			return (
 				<PieChart
-					{...common()}
+					{...seriesProps()}
 					preferredChartColors={props.preferredChartColors}
 				/>
 			);
 		case "line":
 			return (
 				<LineAreaChart
-					{...common()}
+					{...seriesProps()}
 					chartType="line"
 					flowMeta={props.chart.flowMeta}
 					preferredChartColors={props.preferredChartColors}
@@ -533,7 +529,7 @@ function ChartContent(props: {
 		case "area":
 			return (
 				<LineAreaChart
-					{...common()}
+					{...seriesProps()}
 					chartType="area"
 					flowMeta={props.chart.flowMeta}
 					preferredChartColors={props.preferredChartColors}
@@ -551,7 +547,7 @@ function ChartContent(props: {
 		case "heatmap":
 			return (
 				<HeatmapChart
-					{...common()}
+					{...seriesProps()}
 					flowMeta={props.chart.flowMeta}
 					preferredChartColors={props.preferredChartColors}
 					showLegend={
@@ -576,79 +572,35 @@ function ChartContent(props: {
 	}
 }
 
-function EmptyDashboard() {
-	return (
-		<box flexGrow={1} marginY={1} alignItems="center" justifyContent="center">
-			<text fg={theme.textMuted}>This dashboard has no charts yet.</text>
-		</box>
-	);
-}
-
-interface PlacedChart {
-	readonly chart: DashboardChart;
-	readonly pos: GridPosition;
-}
-
-function placeCharts(
-	charts: ReadonlyArray<DashboardChart>,
-): ReadonlyArray<PlacedChart> {
-	const placed: PlacedChart[] = [];
-	const occupied: number[] = [];
-
-	for (const chart of charts) {
-		const fromApi = sanitizePosition(chart.position);
-		const pos = fromApi ?? autoPlace(chart, occupied);
-		markOccupied(occupied, pos);
-		placed.push({ chart, pos });
-	}
-
-	return placed;
-}
-
-function sanitizePosition(pos: ChartGridPosition | null): GridPosition | null {
-	if (!pos) return null;
-	const w = clampInt(Number(pos.w), 1, GRID_COLS);
-	const h = clampInt(Number(pos.h), 1, 32);
-	const x = clampInt(Number(pos.x), 0, GRID_COLS - w);
-	const y = clampInt(Number(pos.y), 0, 1024);
-	return { x, y, w, h };
-}
-
-function clampInt(value: number, min: number, max: number): number {
-	if (!Number.isFinite(value)) return min;
-	return Math.max(min, Math.min(max, Math.round(value)));
-}
-
-function autoPlace(chart: DashboardChart, occupied: number[]): GridPosition {
-	const { w, h } = getChartSize(chart.chartType);
-	for (let y = 0; y < 1024; y++) {
-		for (let x = 0; x <= GRID_COLS - w; x++) {
-			if (isFree(occupied, x, y, w, h)) {
-				return { x, y, w, h };
-			}
+function layoutCharts(charts: ReadonlyArray<DashboardChart>) {
+	let nextY = 0;
+	return charts.map((chart) => {
+		const fromApi = parseChartPosition(chart.position);
+		if (fromApi) {
+			nextY = Math.max(nextY, fromApi.y + fromApi.h);
+			return { chart, pos: fromApi };
 		}
-	}
-	return { x: 0, y: 0, w, h };
+		const size = CHART_SIZES[chart.chartType] ?? DEFAULT_CHART_SIZE;
+		const pos = { x: 0, y: nextY, w: size.w, h: size.h };
+		nextY += size.h;
+		return { chart, pos };
+	});
 }
 
-function isFree(
-	occupied: number[],
-	x: number,
-	y: number,
-	w: number,
-	h: number,
-): boolean {
-	for (let row = y; row < y + h; row++) {
-		const mask = occupied[row] ?? 0;
-		const slot = (((1 << w) - 1) << x) >>> 0;
-		if ((mask & slot) !== 0) return false;
-	}
-	return true;
-}
-
-function markOccupied(occupied: number[], pos: GridPosition): void {
-	const slot = (((1 << pos.w) - 1) << pos.x) >>> 0;
-	for (let row = pos.y; row < pos.y + pos.h; row++) {
-		occupied[row] = (occupied[row] ?? 0) | slot;
-	}
+function parseChartPosition(
+	pos: ChartsListCharts200[number]["position"],
+): { x: number; y: number; w: number; h: number } | null {
+	if (!pos) return null;
+	const finite = (value: number, min: number, max: number) => {
+		const n = Math.round(Number(value));
+		return Number.isFinite(n) ? Math.max(min, Math.min(max, n)) : min;
+	};
+	const w = finite(Number(pos.w), 1, GRID_COLS);
+	const h = finite(Number(pos.h), 1, 32);
+	return {
+		x: finite(Number(pos.x), 0, GRID_COLS - w),
+		y: finite(Number(pos.y), 0, 1024),
+		w,
+		h,
+	};
 }
