@@ -40,7 +40,7 @@ function getBreakdownLabels(rows: SeriesRows): Map<string, string> {
 	return labels;
 }
 
-function getChartSeries({
+export function getChartSeries({
 	rows,
 	metrics,
 	outputDescriptors = [],
@@ -70,26 +70,6 @@ function getChartSeries({
 	});
 }
 
-function pivotScalarMultiOutputToCategories({
-	rows,
-	metrics = [],
-	outputDescriptors = [],
-}: {
-	readonly rows: SeriesRows;
-	readonly metrics?: ChartQueryConfigLite["metrics"];
-	readonly outputDescriptors?: ChartFlowMetaLite["outputs"];
-}): SeriesRows | null {
-	const series = getChartSeries({ rows, metrics, outputDescriptors });
-	if (rows.length !== 1 || series.length <= 1) return null;
-
-	const [sourceRow] = rows;
-	if (sourceRow === undefined) return null;
-	return series.flatMap((entry) => {
-		const value = Number(sourceRow[entry.dataKey]);
-		return value == null ? [] : [{ name: entry.label, value, value_0: value }];
-	});
-}
-
 export interface PreparedBarChartData {
 	readonly entries: ReadonlyArray<SeriesEntry>;
 	readonly isTimeGrouped: boolean;
@@ -105,18 +85,6 @@ export interface PreparedLineAreaChartData {
 	readonly series: ReadonlyArray<PreparedLineAreaSeries>;
 }
 
-export function getChartSeriesLabels(
-	rows: SeriesRows,
-	queryConfig: ChartQueryConfigLite | null | undefined,
-	flowMeta: ChartFlowMetaLite | null | undefined,
-): string[] {
-	return getChartSeries({
-		rows,
-		metrics: queryConfig?.metrics ?? [],
-		outputDescriptors: flowMeta?.outputs ?? [],
-	}).map((entry) => entry.label);
-}
-
 export function prepareLineAreaChartData(
 	rows: SeriesRows | null | undefined,
 	queryConfig: ChartQueryConfigLite | null | undefined,
@@ -126,11 +94,10 @@ export function prepareLineAreaChartData(
 		return { series: [] };
 	}
 
-	const outputDescriptors = flowMeta?.outputs ?? [];
 	const descriptors = getChartSeries({
 		rows,
 		metrics: queryConfig?.metrics ?? [],
-		outputDescriptors,
+		outputDescriptors: flowMeta?.outputs ?? [],
 	});
 
 	return {
@@ -149,35 +116,13 @@ export function prepareBarChartData(
 	if (rows == null || rows.length === 0) {
 		return { entries: [], isTimeGrouped: false, useDynamicColors: false };
 	}
-
 	const isTimeGrouped = flowMeta?.hasTimeGroup ?? false;
-	const outputDescriptors = flowMeta?.outputs ?? [];
-	const metrics = queryConfig?.metrics ?? [];
-
-	const pivoted =
-		!isTimeGrouped &&
-		pivotScalarMultiOutputToCategories({
-			rows,
-			metrics,
-			outputDescriptors,
-		});
-
-	if (pivoted) {
-		return {
-			entries: pivoted.map((row) => ({
-				name: String(row.name),
-				value: Number(row.value_0 ?? row.value),
-			})),
-			isTimeGrouped: false,
-			useDynamicColors: true,
-		};
-	}
 
 	const chartRows = rows;
 	const series = getChartSeries({
 		rows: chartRows,
-		metrics,
-		outputDescriptors,
+		metrics: queryConfig?.metrics ?? [],
+		outputDescriptors: flowMeta?.outputs ?? [],
 	});
 	const metricKey = series[0]?.dataKey ?? resolveMetricKey(queryConfig);
 

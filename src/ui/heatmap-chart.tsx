@@ -29,7 +29,7 @@ import {
 	sampleHeatmapAxisLabels,
 } from "../data/chart-heatmap-matrix.ts";
 import {
-	getChartSeriesLabels,
+	getChartSeries,
 	getChartValueKeys,
 } from "../data/chart-query-utils.ts";
 import { ChartEmptyState, type SeriesChartProps } from "./chart-shared.tsx";
@@ -60,11 +60,11 @@ export function HeatmapChart(props: HeatmapChartProps) {
 		const valueKeys = getChartValueKeys(rows);
 		if (valueKeys.length === 0) return null;
 
-		const seriesLabels = getChartSeriesLabels(
+		const seriesLabels = getChartSeries({
 			rows,
-			props.queryConfig,
-			props.flowMeta,
-		);
+			metrics: props.queryConfig?.metrics ?? [],
+			outputDescriptors: props.flowMeta?.outputs ?? [],
+		}).map((entry) => entry.label);
 		const matrix = buildHeatmapMatrix(rows, valueKeys, seriesLabels);
 		const legendRows = props.showLegend === false ? 0 : 1;
 		const maxRows = Math.min(
