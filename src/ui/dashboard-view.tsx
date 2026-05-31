@@ -5,17 +5,13 @@ import {
 	createMemo,
 	createSignal,
 	For,
+	type JSX,
 	onCleanup,
 	Show,
 } from "solid-js";
 import type { ChartsListCharts200, DashboardRecord } from "../api.ts";
-import {
-	type ChartData,
-	type ChartFlowMetaLite,
-	isSeriesResult,
-	resolveMetricKey,
-	seriesToMapHighlights,
-} from "../data/chart-data.ts";
+import type { ChartData, ChartFlowMetaLite } from "../data/chart-data.ts";
+import type { Project } from "../data/project.ts";
 import { HeatmapChart } from "./heatmap-chart.tsx";
 import { ListChart } from "./list-chart.tsx";
 import { MapChart } from "./map-chart.tsx";
@@ -58,20 +54,16 @@ export type DashboardChart = ChartsListCharts200[number] & {
 };
 
 export interface RunDashboardViewOptions {
-	readonly projectName: string;
-	readonly projectSlug: string;
-	readonly preferredChartColors: ReadonlyArray<string> | null;
+	readonly project: Project;
 	readonly dashboards: ReadonlyArray<DashboardRecord>;
 	readonly loadDashboard: (
 		dashboardId: string,
 	) => Promise<ReadonlyArray<DashboardChart>>;
 }
 
-export type RunDashboardViewResult = { kind: "closed" };
-
 export async function runDashboardView(
 	options: RunDashboardViewOptions,
-): Promise<RunDashboardViewResult> {
+): Promise<{ kind: "closed" }> {
 	return runOpenTui(({ renderer, close }) =>
 		render(
 			() => (
@@ -85,67 +77,55 @@ export async function runDashboardView(
 	);
 }
 
-interface DashboardAppProps {
+function DashboardApp(props: {
 	options: RunDashboardViewOptions;
 	onExit: () => void;
-}
-
-function DashboardApp(props: DashboardAppProps) {
+}) {
 	const dashboards = () => props.options.dashboards;
-	const dashboardCount = () => dashboards().length;
-
-	const [currentIndex, setCurrentIndex] = createSignal(
+	const [tab, setTab] = createSignal(
 		Math.max(
 			0,
 			dashboards().findIndex((d) => d.isDefault),
 		),
 	);
-
-	const currentDashboard = createMemo(() => dashboards()[currentIndex()]);
-
+	const dashboard = createMemo(() => dashboards()[tab()]);
 	const [charts, setCharts] = createSignal<ReadonlyArray<DashboardChart>>([]);
 	const [loading, setLoading] = createSignal(false);
-	const chartCache = new Map<string, ReadonlyArray<DashboardChart>>();
+	const cache = new Map<string, ReadonlyArray<DashboardChart>>();
 
 	createEffect(() => {
-		const dash = currentDashboard();
+		const dash = dashboard();
 		if (!dash) {
 			setCharts([]);
 			setLoading(false);
 			return;
 		}
-
-		const cached = chartCache.get(dash.id);
-		if (cached) {
-			setCharts(cached);
+		const hit = cache.get(dash.id);
+		if (hit) {
+			setCharts(hit);
 			setLoading(false);
 			return;
 		}
-
-		const dashboardId = dash.id;
+		const id = dash.id;
 		let active = true;
 		setLoading(true);
 		setCharts([]);
-
-		void props.options.loadDashboard(dashboardId).then((loaded) => {
-			if (!active || currentDashboard()?.id !== dashboardId) return;
-			chartCache.set(dashboardId, loaded);
+		void props.options.loadDashboard(id).then((loaded) => {
+			if (!active || dashboard()?.id !== id) return;
+			cache.set(id, loaded);
 			setCharts(loaded);
 			setLoading(false);
 		});
-
 		onCleanup(() => {
 			active = false;
 		});
 	});
 
 	const moveTab = (delta: number) => {
-		const total = dashboardCount();
-		if (total === 0) return;
-		setCurrentIndex((i) => Math.max(0, Math.min(total - 1, i + delta)));
+		const n = dashboards().length;
+		if (n === 0) return;
+		setTab((i) => Math.max(0, Math.min(n - 1, i + delta)));
 	};
-
-	const exit = () => props.onExit();
 
 	useKeyboard((key) => {
 		switch (key.name) {
@@ -162,13 +142,17 @@ function DashboardApp(props: DashboardAppProps) {
 				break;
 			case "escape":
 			case "q":
-				exit();
+				props.onExit();
 				break;
 			case "c":
-				if (key.ctrl) exit();
+				if (key.ctrl) props.onExit();
 				break;
 		}
 	});
+
+	const dashTotal = () => dashboards().length;
+	const footerPos = () =>
+		dashTotal() > 0 ? `${tab() + 1}/${dashTotal()}` : "0/0";
 
 	return (
 		<box
@@ -179,12 +163,56 @@ function DashboardApp(props: DashboardAppProps) {
 			paddingX={CONTAINER_PADDING_X}
 			paddingY={1}
 		>
-			<Header
-				title={props.options.projectName}
-				subtitle={props.options.projectSlug}
-			/>
-			<Tabs dashboards={dashboards()} currentIndex={currentIndex()} />
-			<Divider />
+			<box flexDirection="row" height={1} marginBottom={1}>
+				<box flexDirection="row" flexGrow={1} flexShrink={1}>
+					<text
+						fg={theme.textBright}
+						attributes={TextAttributes.BOLD}
+						flexShrink={1}
+					>
+						{props.options.project.name}
+					</text>
+					<text fg={theme.textDim}>{` ${props.options.project.slug}`}</text>
+				</box>
+				<text fg={theme.textMuted}>← → switch ↑ ↓ scroll ⇥ tab q back</text>
+			</box>
+
+			<Show
+				when={dashTotal() > 0}
+				fallback={
+					<box height={1} marginBottom={1}>
+						<text fg={theme.textMuted}>No dashboards</text>
+					</box>
+				}
+			>
+				<box flexDirection="row" height={1} marginBottom={1}>
+					<For each={dashboards()}>
+						{(d, i) => {
+							const active = () => i() === tab();
+							return (
+								<box
+									paddingX={1}
+									marginRight={1}
+									backgroundColor={active() ? theme.selectedBg : theme.bg}
+								>
+									<text
+										fg={active() ? theme.selectedAccent : theme.textMuted}
+										attributes={
+											active() ? TextAttributes.BOLD : TextAttributes.NONE
+										}
+									>
+										{d.name}
+										{d.isDefault ? " ★" : ""}
+									</text>
+								</box>
+							);
+						}}
+					</For>
+				</box>
+			</Show>
+
+			<box height={1} backgroundColor={theme.border} />
+
 			<Show
 				when={!loading()}
 				fallback={
@@ -200,101 +228,20 @@ function DashboardApp(props: DashboardAppProps) {
 			>
 				<DashboardGrid
 					charts={charts()}
-					dashboardId={currentDashboard()?.id ?? null}
-					preferredChartColors={props.options.preferredChartColors}
+					dashboardId={dashboard()?.id ?? null}
+					preferredChartColors={props.options.project.preferredChartColors}
 				/>
 			</Show>
-			<Divider />
-			<Footer
-				chartCount={charts().length}
-				dashboardName={currentDashboard()?.name ?? "No dashboards"}
-				dashboardIndex={currentIndex()}
-				dashboardTotal={dashboardCount()}
-			/>
-		</box>
-	);
-}
 
-function Header(props: { title: string; subtitle: string }) {
-	return (
-		<box flexDirection="row" height={1} marginBottom={1}>
-			<box flexDirection="row" flexGrow={1} flexShrink={1}>
-				<text
-					fg={theme.textBright}
-					attributes={TextAttributes.BOLD}
-					flexShrink={1}
-				>
-					{props.title}
+			<box height={1} backgroundColor={theme.border} />
+
+			<box flexDirection="row" height={1} marginTop={1}>
+				<text fg={theme.textMuted} flexGrow={1} flexShrink={1}>
+					{dashboard()?.name ?? "No dashboards"} · {charts().length} chart
+					{charts().length === 1 ? "" : "s"}
 				</text>
-				<text fg={theme.textDim}>{` ${props.subtitle}`}</text>
+				<text fg={theme.textMuted}>{footerPos()} · live</text>
 			</box>
-			<text fg={theme.textMuted}>← → switch ↑ ↓ scroll ⇥ tab q back</text>
-		</box>
-	);
-}
-
-function Tabs(props: {
-	dashboards: ReadonlyArray<DashboardRecord>;
-	currentIndex: number;
-}) {
-	return (
-		<Show
-			when={props.dashboards.length > 0}
-			fallback={
-				<box height={1} marginBottom={1}>
-					<text fg={theme.textMuted}>No dashboards</text>
-				</box>
-			}
-		>
-			<box flexDirection="row" height={1} marginBottom={1}>
-				<For each={props.dashboards}>
-					{(dashboard, index) => {
-						const isActive = () => index() === props.currentIndex;
-						return (
-							<box
-								paddingX={1}
-								marginRight={1}
-								backgroundColor={isActive() ? theme.selectedBg : theme.bg}
-							>
-								<text
-									fg={isActive() ? theme.selectedAccent : theme.textMuted}
-									attributes={
-										isActive() ? TextAttributes.BOLD : TextAttributes.NONE
-									}
-								>
-									{dashboard.name}
-									{dashboard.isDefault ? " ★" : ""}
-								</text>
-							</box>
-						);
-					}}
-				</For>
-			</box>
-		</Show>
-	);
-}
-
-function Divider() {
-	return <box height={1} backgroundColor={theme.border} />;
-}
-
-function Footer(props: {
-	chartCount: number;
-	dashboardName: string;
-	dashboardIndex: number;
-	dashboardTotal: number;
-}) {
-	const position = () =>
-		props.dashboardTotal > 0
-			? `${props.dashboardIndex + 1}/${props.dashboardTotal}`
-			: "0/0";
-	return (
-		<box flexDirection="row" height={1} marginTop={1}>
-			<text fg={theme.textMuted} flexGrow={1} flexShrink={1}>
-				{props.dashboardName} · {props.chartCount} chart
-				{props.chartCount === 1 ? "" : "s"}
-			</text>
-			<text fg={theme.textMuted}>{position()} · live</text>
 		</box>
 	);
 }
@@ -318,9 +265,9 @@ function DashboardGrid(props: {
 			Math.min(ROW_HEIGHT_MAX, Math.round(cellWidth() * ROW_HEIGHT_RATIO)),
 		),
 	);
-	const placedCharts = createMemo(() => layoutCharts(props.charts));
+	const tiles = createMemo(() => layoutCharts(props.charts));
 	const gridHeight = createMemo(() => {
-		const items = placedCharts();
+		const items = tiles();
 		if (items.length === 0) return rowHeight();
 		const maxBottom = items.reduce(
 			(max, entry) => Math.max(max, entry.pos.y + entry.pos.h),
@@ -388,10 +335,7 @@ function DashboardGrid(props: {
 				scrollX={false}
 				scrollY={true}
 				viewportCulling={true}
-				contentOptions={{
-					width: "100%",
-					height: gridHeight(),
-				}}
+				contentOptions={{ width: "100%", height: gridHeight() }}
 				verticalScrollbarOptions={{
 					trackOptions: {
 						backgroundColor: theme.surface,
@@ -399,9 +343,9 @@ function DashboardGrid(props: {
 					},
 				}}
 			>
-				<For each={placedCharts()}>
+				<For each={tiles()}>
 					{(entry, i) => (
-						<ChartBox
+						<ChartTile
 							chart={entry.chart}
 							pos={entry.pos}
 							cellWidth={cellWidth()}
@@ -416,7 +360,7 @@ function DashboardGrid(props: {
 	);
 }
 
-function ChartBox(props: {
+function ChartTile(props: {
 	chart: DashboardChart;
 	pos: {
 		readonly x: number;
@@ -429,134 +373,70 @@ function ChartBox(props: {
 	accent: string;
 	preferredChartColors: ReadonlyArray<string> | null;
 }) {
-	const left = createMemo(() => props.pos.x * props.cellWidth);
-	const width = createMemo(() =>
-		Math.max(2, props.pos.w * props.cellWidth - CELL_GAP),
-	);
-	const top = createMemo(() => props.pos.y * props.rowHeight);
-	const height = createMemo(() =>
-		Math.max(2, props.pos.h * props.rowHeight - CELL_GAP),
-	);
-	const innerWidth = createMemo(() => Math.max(1, width() - 4));
-	const innerHeight = createMemo(() => Math.max(1, height() - 2));
-
-	const mapHighlights = createMemo(() => {
-		if (props.chart.chartType !== "map" || !isSeriesResult(props.chart.data)) {
-			return [];
-		}
-		return seriesToMapHighlights(
-			props.chart.data,
-			resolveMetricKey(props.chart.queryConfig),
-			{
-				chartColors: props.chart.queryConfig?.visualOptions?.colors,
-				preferredChartColors: props.preferredChartColors,
-			},
-		);
-	});
-
-	return (
-		<box
-			position="absolute"
-			left={left()}
-			top={top()}
-			width={width()}
-			height={height()}
-			border={true}
-			borderStyle="single"
-			borderColor={props.accent}
-			backgroundColor={theme.surface}
-			title={` ${props.chart.name} `}
-			titleAlignment="left"
-			paddingX={1}
-		>
-			<ChartContent
-				chart={props.chart}
-				accent={props.accent}
-				innerWidth={innerWidth}
-				innerHeight={innerHeight}
-				preferredChartColors={props.preferredChartColors}
-				mapHighlights={mapHighlights}
-			/>
-		</box>
-	);
-}
-
-function ChartContent(props: {
-	chart: DashboardChart;
-	accent: string;
-	innerWidth: () => number;
-	innerHeight: () => number;
-	preferredChartColors: ReadonlyArray<string> | null;
-	mapHighlights: () => ReturnType<typeof seriesToMapHighlights>;
-}) {
-	const seriesProps = () => ({
+	const left = props.pos.x * props.cellWidth;
+	const width = Math.max(2, props.pos.w * props.cellWidth - CELL_GAP);
+	const top = props.pos.y * props.rowHeight;
+	const height = Math.max(2, props.pos.h * props.rowHeight - CELL_GAP);
+	const innerWidth = Math.max(1, width - 4);
+	const innerHeight = Math.max(1, height - 2);
+	const series = {
 		data: props.chart.data,
 		queryConfig: props.chart.queryConfig,
 		accent: props.accent,
-		innerWidth: props.innerWidth(),
-		innerHeight: props.innerHeight(),
-	});
+		innerWidth,
+		innerHeight,
+	};
+	const colors = props.preferredChartColors;
+	const flowMeta = props.chart.flowMeta;
 
+	let body: JSX.Element;
 	switch (props.chart.chartType) {
 		case "widget":
-			return <WidgetChart {...seriesProps()} />;
+			body = <WidgetChart {...series} />;
+			break;
 		case "list":
-			return <ListChart {...seriesProps()} />;
+			body = <ListChart {...series} />;
+			break;
 		case "bar":
-			return (
+			body = (
 				<BarChart
-					{...seriesProps()}
-					flowMeta={props.chart.flowMeta}
-					preferredChartColors={props.preferredChartColors}
+					{...series}
+					flowMeta={flowMeta}
+					preferredChartColors={colors}
 				/>
 			);
+			break;
 		case "pie":
-			return (
-				<PieChart
-					{...seriesProps()}
-					preferredChartColors={props.preferredChartColors}
-				/>
-			);
+			body = <PieChart {...series} preferredChartColors={colors} />;
+			break;
 		case "line":
-			return (
-				<LineAreaChart
-					{...seriesProps()}
-					chartType="line"
-					flowMeta={props.chart.flowMeta}
-					preferredChartColors={props.preferredChartColors}
-				/>
-			);
 		case "area":
-			return (
+			body = (
 				<LineAreaChart
-					{...seriesProps()}
-					chartType="area"
-					flowMeta={props.chart.flowMeta}
-					preferredChartColors={props.preferredChartColors}
+					{...series}
+					chartType={props.chart.chartType}
+					flowMeta={flowMeta}
+					preferredChartColors={colors}
 				/>
 			);
+			break;
 		case "map":
-			return (
-				<MapChart
-					accent={props.accent}
-					innerWidth={props.innerWidth()}
-					innerHeight={props.innerHeight()}
-					highlights={props.mapHighlights()}
-				/>
-			);
+			body = <MapChart {...series} preferredChartColors={colors} />;
+			break;
 		case "heatmap":
-			return (
+			body = (
 				<HeatmapChart
-					{...seriesProps()}
-					flowMeta={props.chart.flowMeta}
-					preferredChartColors={props.preferredChartColors}
+					{...series}
+					flowMeta={flowMeta}
+					preferredChartColors={colors}
 					showLegend={
 						props.chart.queryConfig?.visualOptions?.heatmap?.showLegend ?? true
 					}
 				/>
 			);
+			break;
 		default:
-			return (
+			body = (
 				<box
 					flexDirection="column"
 					width="100%"
@@ -570,37 +450,51 @@ function ChartContent(props: {
 				</box>
 			);
 	}
+
+	return (
+		<box
+			position="absolute"
+			left={left}
+			top={top}
+			width={width}
+			height={height}
+			border={true}
+			borderStyle="single"
+			borderColor={props.accent}
+			backgroundColor={theme.surface}
+			title={` ${props.chart.name} `}
+			titleAlignment="left"
+			paddingX={1}
+		>
+			{body}
+		</box>
+	);
 }
 
 function layoutCharts(charts: ReadonlyArray<DashboardChart>) {
+	const finite = (value: number, min: number, max: number) => {
+		const n = Math.round(Number(value));
+		return Number.isFinite(n) ? Math.max(min, Math.min(max, n)) : min;
+	};
+
 	let nextY = 0;
 	return charts.map((chart) => {
-		const fromApi = parseChartPosition(chart.position);
-		if (fromApi) {
-			nextY = Math.max(nextY, fromApi.y + fromApi.h);
-			return { chart, pos: fromApi };
+		const raw = chart.position;
+		if (raw) {
+			const w = finite(Number(raw.w), 1, GRID_COLS);
+			const h = finite(Number(raw.h), 1, 32);
+			const pos = {
+				x: finite(Number(raw.x), 0, GRID_COLS - w),
+				y: finite(Number(raw.y), 0, 1024),
+				w,
+				h,
+			};
+			nextY = Math.max(nextY, pos.y + pos.h);
+			return { chart, pos };
 		}
 		const size = CHART_SIZES[chart.chartType] ?? DEFAULT_CHART_SIZE;
 		const pos = { x: 0, y: nextY, w: size.w, h: size.h };
 		nextY += size.h;
 		return { chart, pos };
 	});
-}
-
-function parseChartPosition(
-	pos: ChartsListCharts200[number]["position"],
-): { x: number; y: number; w: number; h: number } | null {
-	if (!pos) return null;
-	const finite = (value: number, min: number, max: number) => {
-		const n = Math.round(Number(value));
-		return Number.isFinite(n) ? Math.max(min, Math.min(max, n)) : min;
-	};
-	const w = finite(Number(pos.w), 1, GRID_COLS);
-	const h = finite(Number(pos.h), 1, 32);
-	return {
-		x: finite(Number(pos.x), 0, GRID_COLS - w),
-		y: finite(Number(pos.y), 0, 1024),
-		w,
-		h,
-	};
 }

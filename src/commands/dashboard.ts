@@ -75,13 +75,7 @@ export const dashboardCommand = Command.make(
 				}).pipe(Effect.runPromise);
 
 			yield* Effect.tryPromise(() =>
-				runDashboardView({
-					projectName: project.name,
-					projectSlug: project.slug,
-					preferredChartColors: project.preferredChartColors,
-					dashboards,
-					loadDashboard,
-				}),
+				runDashboardView({ project, dashboards, loadDashboard }),
 			);
 		}
 	}),

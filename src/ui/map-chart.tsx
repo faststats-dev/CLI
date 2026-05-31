@@ -1,6 +1,12 @@
 import { type FrameBufferRenderable, RGBA } from "@opentui/core";
 import { createMemo } from "solid-js";
-import type { MapChartHighlight } from "../data/chart-data.ts";
+import {
+	type ChartData,
+	type ChartQueryConfig,
+	isSeriesResult,
+	resolveMetricKey,
+	seriesToMapHighlights,
+} from "../data/chart-data.ts";
 import { BRAILLE_BASE, BRAILLE_DOT_BITS } from "./braille.ts";
 import { FrameBufferView } from "./chart-shared.tsx";
 import { theme } from "./theme.ts";
@@ -10,7 +16,9 @@ export interface MapChartProps {
 	readonly accent: string;
 	readonly innerWidth: number;
 	readonly innerHeight: number;
-	readonly highlights?: ReadonlyArray<MapChartHighlight>;
+	readonly data: ChartData | null;
+	readonly queryConfig: ChartQueryConfig | null;
+	readonly preferredChartColors: ReadonlyArray<string> | null;
 }
 
 export function MapChart(props: MapChartProps) {
@@ -19,7 +27,16 @@ export function MapChart(props: MapChartProps) {
 
 	const highlightMap = createMemo(() => {
 		const map = new Map<number, RGBA>();
-		for (const entry of props.highlights ?? []) {
+		if (!isSeriesResult(props.data)) return map;
+		const highlights = seriesToMapHighlights(
+			props.data,
+			resolveMetricKey(props.queryConfig),
+			{
+				chartColors: props.queryConfig?.visualOptions?.colors,
+				preferredChartColors: props.preferredChartColors,
+			},
+		);
+		for (const entry of highlights) {
 			const idx = findCountryIndex(entry.country);
 			if (idx === null) continue;
 			map.set(idx + 1, RGBA.fromHex(entry.color));
