@@ -1,6 +1,6 @@
 import type {
 	ChartFlowMetaLite,
-	ChartQueryConfigLite,
+	ChartQueryConfig,
 	SeriesEntry,
 	SeriesRows,
 } from "./chart-data.ts";
@@ -46,7 +46,7 @@ export function getChartSeries({
 	outputDescriptors = [],
 }: {
 	readonly rows: SeriesRows;
-	readonly metrics: ChartQueryConfigLite["metrics"];
+	readonly metrics: ChartQueryConfig["metrics"];
 	readonly outputDescriptors?: ChartFlowMetaLite["outputs"];
 }): ReadonlyArray<ChartSeriesDescriptor> {
 	const breakdownLabels = getBreakdownLabels(rows);
@@ -87,7 +87,7 @@ export interface PreparedLineAreaChartData {
 
 export function prepareLineAreaChartData(
 	rows: SeriesRows | null | undefined,
-	queryConfig: ChartQueryConfigLite | null | undefined,
+	queryConfig: ChartQueryConfig | null | undefined,
 	flowMeta: ChartFlowMetaLite | null | undefined,
 ): PreparedLineAreaChartData {
 	if (rows == null || rows.length === 0) {
@@ -110,7 +110,7 @@ export function prepareLineAreaChartData(
 
 export function prepareBarChartData(
 	rows: SeriesRows | null | undefined,
-	queryConfig: ChartQueryConfigLite | null | undefined,
+	queryConfig: ChartQueryConfig | null | undefined,
 	flowMeta: ChartFlowMetaLite | null | undefined,
 ): PreparedBarChartData {
 	if (rows == null || rows.length === 0) {

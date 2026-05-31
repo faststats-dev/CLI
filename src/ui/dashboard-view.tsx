@@ -8,10 +8,10 @@ import {
 	onCleanup,
 	Show,
 } from "solid-js";
+import type { ChartsListCharts200 } from "../api.ts";
 import {
 	type ChartData,
 	type ChartFlowMetaLite,
-	type ChartQueryConfigLite,
 	isSeriesResult,
 	resolveMetricKey,
 	seriesToMapHighlights,
@@ -62,23 +62,21 @@ export interface DashboardLite {
 	readonly isDefault: boolean;
 }
 
-export interface GridPosition {
+interface GridPosition {
 	readonly x: number;
 	readonly y: number;
 	readonly w: number;
 	readonly h: number;
 }
 
-export interface ChartLite {
-	readonly id: string;
-	readonly name: string;
-	readonly chartType: string;
-	readonly dashboardId: string | null;
-	readonly position: GridPosition | null;
-	readonly queryConfig: ChartQueryConfigLite | null;
+type ChartListItem = ChartsListCharts200[number];
+
+type ChartGridPosition = NonNullable<ChartListItem["position"]>;
+
+export type DashboardChart = ChartListItem & {
 	readonly data: ChartData | null;
 	readonly flowMeta: ChartFlowMetaLite | null;
-}
+};
 
 export interface RunDashboardViewOptions {
 	readonly projectName: string;
@@ -87,7 +85,7 @@ export interface RunDashboardViewOptions {
 	readonly dashboards: ReadonlyArray<DashboardLite>;
 	readonly loadDashboard: (
 		dashboardId: string,
-	) => Promise<ReadonlyArray<ChartLite>>;
+	) => Promise<ReadonlyArray<DashboardChart>>;
 }
 
 export type RunDashboardViewResult = { kind: "closed" };
@@ -126,9 +124,9 @@ function DashboardApp(props: DashboardAppProps) {
 
 	const currentDashboard = createMemo(() => dashboards()[currentIndex()]);
 
-	const [charts, setCharts] = createSignal<ReadonlyArray<ChartLite>>([]);
+	const [charts, setCharts] = createSignal<ReadonlyArray<DashboardChart>>([]);
 	const [loading, setLoading] = createSignal(false);
-	const chartCache = new Map<string, ReadonlyArray<ChartLite>>();
+	const chartCache = new Map<string, ReadonlyArray<DashboardChart>>();
 
 	createEffect(() => {
 		const dash = currentDashboard();
@@ -323,7 +321,7 @@ function Footer(props: {
 }
 
 function DashboardGrid(props: {
-	charts: ReadonlyArray<ChartLite>;
+	charts: ReadonlyArray<DashboardChart>;
 	dashboardId: string | null;
 	preferredChartColors: ReadonlyArray<string> | null;
 }) {
@@ -428,7 +426,7 @@ function DashboardGrid(props: {
 }
 
 function ChartBox(props: {
-	chart: ChartLite;
+	chart: DashboardChart;
 	pos: GridPosition;
 	cellWidth: number;
 	rowHeight: number;
@@ -488,7 +486,7 @@ function ChartBox(props: {
 }
 
 function ChartContent(props: {
-	chart: ChartLite;
+	chart: DashboardChart;
 	accent: string;
 	innerWidth: () => number;
 	innerHeight: () => number;
@@ -587,12 +585,12 @@ function EmptyDashboard() {
 }
 
 interface PlacedChart {
-	readonly chart: ChartLite;
+	readonly chart: DashboardChart;
 	readonly pos: GridPosition;
 }
 
 function placeCharts(
-	charts: ReadonlyArray<ChartLite>,
+	charts: ReadonlyArray<DashboardChart>,
 ): ReadonlyArray<PlacedChart> {
 	const placed: PlacedChart[] = [];
 	const occupied: number[] = [];
@@ -607,12 +605,12 @@ function placeCharts(
 	return placed;
 }
 
-function sanitizePosition(pos: GridPosition | null): GridPosition | null {
+function sanitizePosition(pos: ChartGridPosition | null): GridPosition | null {
 	if (!pos) return null;
-	const w = clampInt(pos.w, 1, GRID_COLS);
-	const h = clampInt(pos.h, 1, 32);
-	const x = clampInt(pos.x, 0, GRID_COLS - w);
-	const y = clampInt(pos.y, 0, 1024);
+	const w = clampInt(Number(pos.w), 1, GRID_COLS);
+	const h = clampInt(Number(pos.h), 1, 32);
+	const x = clampInt(Number(pos.x), 0, GRID_COLS - w);
+	const y = clampInt(Number(pos.y), 0, 1024);
 	return { x, y, w, h };
 }
 
@@ -621,7 +619,7 @@ function clampInt(value: number, min: number, max: number): number {
 	return Math.max(min, Math.min(max, Math.round(value)));
 }
 
-function autoPlace(chart: ChartLite, occupied: number[]): GridPosition {
+function autoPlace(chart: DashboardChart, occupied: number[]): GridPosition {
 	const { w, h } = getChartSize(chart.chartType);
 	for (let y = 0; y < 1024; y++) {
 		for (let x = 0; x <= GRID_COLS - w; x++) {

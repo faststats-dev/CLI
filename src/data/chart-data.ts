@@ -1,4 +1,7 @@
-import type { MetricsLoadDashboardData200 } from "../api.ts";
+import type {
+	ChartsListCharts200,
+	MetricsLoadDashboardData200,
+} from "../api.ts";
 import { theme } from "../ui/theme.ts";
 import { getChartColor, resolveChartPalette } from "./chart-color-palette.ts";
 
@@ -32,26 +35,9 @@ export type ChartFlowMetaLite = NonNullable<
 	MetricsLoadDashboardData200["flowMeta"]
 >[string];
 
-export interface ChartQueryConfigLite {
-	readonly primaryMetric?: {
-		readonly field: string;
-	} | null;
-	readonly metrics?: ReadonlyArray<{ readonly field: string }> | null;
-	readonly visualOptions?: {
-		readonly colors?: ReadonlyArray<string> | null;
-		readonly widget?: {
-			readonly showTrend?: boolean | null;
-			readonly displayMode?: "default" | "compact" | null;
-			readonly valueFormat?: "number" | "percent" | null;
-		} | null;
-		readonly list?: {
-			readonly selectedTabIndex?: number | null;
-		} | null;
-		readonly heatmap?: {
-			readonly showLegend?: boolean | null;
-		} | null;
-	} | null;
-}
+export type ChartQueryConfig = NonNullable<
+	ChartsListCharts200[number]["queryConfig"]
+>;
 
 export interface SeriesEntry {
 	readonly name: string;
@@ -178,10 +164,11 @@ export function truncateLabel(label: string, maxLength: number): string {
 }
 
 export function resolveListTabIndex(
-	queryConfig: ChartQueryConfigLite | null | undefined,
+	queryConfig: ChartQueryConfig | null | undefined,
 ): number {
 	const saved = queryConfig?.visualOptions?.list?.selectedTabIndex ?? 0;
-	return saved >= 0 ? saved : 0;
+	const index = Number(saved);
+	return Number.isFinite(index) && index >= 0 ? index : 0;
 }
 
 export function formatWidgetValue(
@@ -224,14 +211,14 @@ export function formatWidgetTrend(trend: number): {
 }
 
 export function resolveMetricLabel(
-	queryConfig: ChartQueryConfigLite | null | undefined,
+	queryConfig: ChartQueryConfig | null | undefined,
 	fallback = "Value",
 ): string {
 	return resolveMetricKey(queryConfig) ?? fallback;
 }
 
 export function resolveMetricKey(
-	queryConfig: ChartQueryConfigLite | null | undefined,
+	queryConfig: ChartQueryConfig | null | undefined,
 ): string | null {
 	if (!queryConfig) return null;
 	const primary = queryConfig.primaryMetric?.field;

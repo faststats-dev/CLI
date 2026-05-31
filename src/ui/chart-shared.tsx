@@ -1,12 +1,12 @@
 import { type BoxRenderable, FrameBufferRenderable } from "@opentui/core";
 import { useRenderer } from "@opentui/solid";
 import { createEffect, createMemo, createSignal, onCleanup } from "solid-js";
-import type { ChartData, ChartQueryConfigLite } from "../data/chart-data.ts";
+import type { ChartData, ChartQueryConfig } from "../data/chart-data.ts";
 import { theme } from "./theme.ts";
 
 export interface SeriesChartProps {
 	readonly data: ChartData | null;
-	readonly queryConfig: ChartQueryConfigLite | null;
+	readonly queryConfig: ChartQueryConfig | null;
 	readonly accent: string;
 	readonly innerWidth: number;
 	readonly innerHeight: number;

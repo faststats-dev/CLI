@@ -2,7 +2,7 @@ import { TextAttributes } from "@opentui/core";
 import { createMemo, Show } from "solid-js";
 import {
 	type ChartData,
-	type ChartQueryConfigLite,
+	type ChartQueryConfig,
 	formatWidgetTrend,
 	formatWidgetValue,
 	resolveWidgetMetric,
@@ -11,7 +11,7 @@ import { theme } from "./theme.ts";
 
 export interface WidgetChartProps {
 	readonly data: ChartData | null;
-	readonly queryConfig: ChartQueryConfigLite | null;
+	readonly queryConfig: ChartQueryConfig | null;
 	readonly accent: string;
 	readonly innerWidth: number;
 	readonly innerHeight: number;

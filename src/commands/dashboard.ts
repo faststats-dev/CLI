@@ -1,13 +1,11 @@
 import { Console, Effect } from "effect";
 import { Command } from "effect/unstable/cli";
-import type { ChartsListCharts200 } from "../api.ts";
 import { FastStatsApi } from "../api-client.ts";
-import type { ChartData, ChartQueryConfigLite } from "../data/chart-data.ts";
+import type { ChartData } from "../data/chart-data.ts";
 import type { Project } from "../data/project.ts";
 import {
-	type ChartLite,
+	type DashboardChart,
 	type DashboardLite,
-	type GridPosition,
 	runDashboardView,
 } from "../ui/dashboard-view.tsx";
 import { runProjectsTable } from "../ui/projects-table.tsx";
@@ -72,9 +70,16 @@ export const dashboardCommand = Command.make(
 						},
 					});
 
-					const chartData = dashboardData.charts as Record<string, ChartData>;
-					return charts.map((c) =>
-						toChartLite(c, chartData, dashboardData.flowMeta),
+					const chartDataById = dashboardData.charts as Record<
+						string,
+						ChartData
+					>;
+					return charts.map(
+						(chart): DashboardChart => ({
+							...chart,
+							data: chartDataById[chart.id] ?? null,
+							flowMeta: dashboardData.flowMeta?.[chart.id] ?? null,
+						}),
 					);
 				}).pipe(Effect.runPromise);
 
@@ -90,87 +95,3 @@ export const dashboardCommand = Command.make(
 		}
 	}),
 ).pipe(Command.withDescription("Browse project dashboards in the terminal UI"));
-
-function toChartLite(
-	chart: ChartsListCharts200[number],
-	chartData: Record<string, ChartData>,
-	flowMeta: { readonly [x: string]: ChartLite["flowMeta"] } | null | undefined,
-): ChartLite {
-	return {
-		id: chart.id,
-		name: chart.name,
-		chartType: chart.chartType,
-		dashboardId: chart.dashboardId,
-		position: toGridPosition(chart.position),
-		queryConfig: toQueryConfigLite(chart.queryConfig),
-		data: chartData[chart.id] ?? null,
-		flowMeta: flowMeta?.[chart.id] ?? null,
-	};
-}
-
-function toGridPosition(
-	pos:
-		| {
-				readonly x: number | "NaN" | "Infinity" | "-Infinity";
-				readonly y: number | "NaN" | "Infinity" | "-Infinity";
-				readonly w: number | "NaN" | "Infinity" | "-Infinity";
-				readonly h: number | "NaN" | "Infinity" | "-Infinity";
-		  }
-		| null
-		| undefined,
-): GridPosition | null {
-	if (!pos) return null;
-	const x = Number(pos.x);
-	const y = Number(pos.y);
-	const w = Number(pos.w);
-	const h = Number(pos.h);
-	if (![x, y, w, h].every(Number.isFinite)) return null;
-	return { x, y, w, h };
-}
-
-type ApiChartQueryConfig = NonNullable<
-	ChartsListCharts200[number]["queryConfig"]
->;
-
-function toFiniteTabIndex(
-	value: number | "NaN" | "Infinity" | "-Infinity" | null | undefined,
-): number | null {
-	if (value == null) return null;
-	const parsed = Number(value);
-	return Number.isFinite(parsed) ? parsed : null;
-}
-
-function toQueryConfigLite(
-	queryConfig: ApiChartQueryConfig | null,
-): ChartQueryConfigLite | null {
-	if (!queryConfig) return null;
-	const { primaryMetric, metrics, visualOptions } = queryConfig;
-	return {
-		primaryMetric: primaryMetric ? { field: primaryMetric.field } : null,
-		metrics: metrics?.map((m) => ({ field: m.field })) ?? null,
-		visualOptions: visualOptions
-			? {
-					colors: visualOptions.colors,
-					widget: visualOptions.widget
-						? {
-								showTrend: visualOptions.widget.showTrend,
-								displayMode: visualOptions.widget.displayMode,
-								valueFormat: visualOptions.widget.valueFormat,
-							}
-						: null,
-					list: visualOptions.list
-						? {
-								selectedTabIndex: toFiniteTabIndex(
-									visualOptions.list.selectedTabIndex,
-								),
-							}
-						: null,
-					heatmap: visualOptions.heatmap
-						? {
-								showLegend: visualOptions.heatmap.showLegend,
-							}
-						: null,
-				}
-			: null,
-	};
-}
