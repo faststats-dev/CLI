@@ -21,10 +21,10 @@ export interface MapChartProps {
 	readonly preferredChartColors: ReadonlyArray<string> | null;
 }
 
-export function MapChart(props: MapChartProps) {
-	const oceanColor = RGBA.fromHex(theme.surface);
-	const landColor = RGBA.fromHex(theme.borderStrong);
+const OCEAN_COLOR = RGBA.fromHex(theme.surface);
+const LAND_COLOR = RGBA.fromHex(theme.borderStrong);
 
+export function MapChart(props: MapChartProps) {
 	const highlightMap = createMemo(() => {
 		const map = new Map<number, RGBA>();
 		const highlights = seriesToMapHighlights(
@@ -52,8 +52,8 @@ export function MapChart(props: MapChartProps) {
 					frameBuffer,
 					width,
 					height,
-					oceanColor,
-					landColor,
+					OCEAN_COLOR,
+					LAND_COLOR,
 					highlightMap(),
 				)
 			}

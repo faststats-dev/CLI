@@ -387,7 +387,6 @@ function ChartTile(props: {
 		innerHeight,
 	};
 	const colors = props.preferredChartColors;
-	const flowMeta = props.chart.flowMeta;
 
 	let body: JSX.Element;
 	switch (props.chart.chartType) {
@@ -401,7 +400,7 @@ function ChartTile(props: {
 			body = (
 				<BarChart
 					{...series}
-					flowMeta={flowMeta}
+					flowMeta={props.chart.flowMeta}
 					preferredChartColors={colors}
 				/>
 			);
@@ -415,7 +414,7 @@ function ChartTile(props: {
 				<LineAreaChart
 					{...series}
 					chartType={props.chart.chartType}
-					flowMeta={flowMeta}
+					flowMeta={props.chart.flowMeta}
 					preferredChartColors={colors}
 				/>
 			);
@@ -427,7 +426,7 @@ function ChartTile(props: {
 			body = (
 				<HeatmapChart
 					{...series}
-					flowMeta={flowMeta}
+					flowMeta={props.chart.flowMeta}
 					preferredChartColors={colors}
 					showLegend={
 						props.chart.queryConfig?.visualOptions?.heatmap?.showLegend ?? true

@@ -3,7 +3,11 @@ import type {
 	MetricsLoadDashboardData200,
 } from "../api.ts";
 import { theme } from "../ui/theme.ts";
-import { getChartColor, resolveChartPalette } from "./chart-color-palette.ts";
+import {
+	blendHexOnBackground,
+	getChartColor,
+	resolveChartPalette,
+} from "./chart-color-palette.ts";
 
 export interface MapChartHighlight {
 	readonly country: string;
@@ -20,7 +24,7 @@ export type SeriesRows = ReadonlyArray<{
 	readonly [x: string]: string | number;
 }>;
 
-export type TabsChartData = {
+type TabsChartData = {
 	readonly tabs: ReadonlyArray<SeriesRows> | Record<string, SeriesRows>;
 };
 
@@ -62,17 +66,10 @@ function isWidgetMetric(value: unknown): value is WidgetMetric {
 export function resolveWidgetMetric(
 	data: ChartData | null | undefined,
 ): WidgetMetric | null {
-	if (data == null || typeof data !== "object") return null;
-	if (Array.isArray(data)) {
-		if (data.length === 0) return null;
-		const first = data[0];
-		if (Array.isArray(first)) {
-			const metric = first[0];
-			return isWidgetMetric(metric) ? metric : null;
-		}
-		return isWidgetMetric(first) ? first : null;
-	}
-	return isWidgetMetric(data) ? data : null;
+	if (!Array.isArray(data)) return isWidgetMetric(data) ? data : null;
+	const first = data[0];
+	const metric = Array.isArray(first) ? first[0] : first;
+	return isWidgetMetric(metric) ? metric : null;
 }
 
 export function resolveSeriesRows(
@@ -81,15 +78,27 @@ export function resolveSeriesRows(
 ): SeriesRows | null {
 	if (data == null) return null;
 	if (Array.isArray(data)) return data;
-	if (typeof data === "object" && data != null && "tabs" in data) {
-		const tabs = data.tabs;
-		if (Array.isArray(tabs)) {
-			return tabs[tabIndex] ?? tabs[0] ?? null;
-		}
-		const values = Object.values(tabs);
-		return values[tabIndex] ?? values[0] ?? null;
+	if ("tabs" in data) {
+		const tabs = Array.isArray(data.tabs)
+			? data.tabs
+			: Object.values(data.tabs);
+		return tabs[tabIndex] ?? tabs[0] ?? null;
 	}
 	return null;
+}
+
+function rowsToEntries(
+	rows: SeriesRows,
+	metricKey: string | null,
+): SeriesEntry[] {
+	const valueKey = rows[0] ? resolveSeriesValueKey(rows[0], metricKey) : null;
+	if (valueKey == null) return [];
+	const entries: SeriesEntry[] = [];
+	for (const row of rows) {
+		const value = Number(row[valueKey]);
+		if (Number.isFinite(value)) entries.push({ name: row.name, value });
+	}
+	return entries;
 }
 
 export function parseSeriesEntries(
@@ -97,20 +106,8 @@ export function parseSeriesEntries(
 	metricKey: string | null,
 	options: { readonly sort?: "desc" | "none" } = {},
 ): ReadonlyArray<SeriesEntry> {
-	if (rows == null || rows.length === 0) return [];
-
-	const [firstRow] = rows;
-	if (firstRow === undefined) return [];
-	const valueKey = resolveSeriesValueKey(firstRow, metricKey);
-	if (valueKey == null) return [];
-
-	const entries: SeriesEntry[] = [];
-	for (const row of rows) {
-		const value = Number(row[valueKey]);
-		if (value == null) continue;
-		entries.push({ name: row.name, value });
-	}
-
+	if (rows == null) return [];
+	const entries = rowsToEntries(rows, metricKey);
 	if (options.sort === "none") return entries;
 	return entries.sort((a, b) => b.value - a.value);
 }
@@ -136,7 +133,6 @@ export function bucketSeriesEntries(
 }
 
 export function truncateLabel(label: string, maxLength: number): string {
-	if (maxLength <= 1) return label.slice(0, maxLength);
 	if (label.length <= maxLength) return label;
 	if (maxLength <= 3) return label.slice(0, maxLength);
 	return `${label.slice(0, maxLength - 1)}…`;
@@ -150,26 +146,25 @@ export function resolveListTabIndex(
 	return Number.isFinite(index) && index >= 0 ? index : 0;
 }
 
+function formatNumber(value: number, format: "number" | "percent"): string {
+	return format === "percent"
+		? `${percentFormatter.format(value)}%`
+		: numberFormatter.format(value);
+}
+
 export function formatWidgetValue(
 	value: string | number | null | undefined,
 	format: "number" | "percent" = "number",
 ): string {
 	if (value == null || value === "") return "—";
-	if (typeof value === "string") {
-		const match = value.match(NUMERIC_PREFIX_PATTERN);
-		if (!match) return value;
-		const numericValue = Number(match[1]);
-		if (!Number.isFinite(numericValue)) return value;
-		const formattedNumber =
-			format === "percent"
-				? `${percentFormatter.format(numericValue)}%`
-				: numberFormatter.format(numericValue);
-		return `${formattedNumber}${match[2] ?? ""}`;
+	if (typeof value === "number") {
+		return Number.isFinite(value) ? formatNumber(value, format) : "—";
 	}
-	if (!Number.isFinite(value)) return "—";
-	return format === "percent"
-		? `${percentFormatter.format(value)}%`
-		: numberFormatter.format(value);
+	const match = value.match(NUMERIC_PREFIX_PATTERN);
+	if (!match) return value;
+	const numericValue = Number(match[1]);
+	if (!Number.isFinite(numericValue)) return value;
+	return `${formatNumber(numericValue, format)}${match[2] ?? ""}`;
 }
 
 export function formatWidgetTrend(trend: number): {
@@ -180,13 +175,11 @@ export function formatWidgetTrend(trend: number): {
 	if (!Number.isFinite(trend) || trend === 0) {
 		return { text: "0%", color: theme.textMuted, prefix: "" };
 	}
-	if (trend > 0) {
-		const pct = trend >= 10 ? trend.toFixed(0) : percentFormatter.format(trend);
-		return { text: `${pct}%`, color: theme.success, prefix: "+" };
-	}
 	const abs = Math.abs(trend);
-	const pct = abs >= 10 ? abs.toFixed(0) : percentFormatter.format(abs);
-	return { text: `${pct}%`, color: theme.danger, prefix: "" };
+	const text = `${abs >= 10 ? abs.toFixed(0) : percentFormatter.format(abs)}%`;
+	return trend > 0
+		? { text, color: theme.success, prefix: "+" }
+		: { text, color: theme.danger, prefix: "" };
 }
 
 export function resolveMetricKey(
@@ -203,17 +196,12 @@ function resolveSeriesValueKey(
 	row: { readonly [x: string]: string | number },
 	preferredKey: string | null,
 ): string | null {
-	if ("value" in row && Number(row.value) != null) {
-		return "value";
-	}
-	if (preferredKey != null) {
-		if (Number(row[preferredKey]) != null) {
-			return preferredKey;
-		}
+	if (Number.isFinite(Number(row.value))) return "value";
+	if (preferredKey != null && Number.isFinite(Number(row[preferredKey]))) {
+		return preferredKey;
 	}
 	for (const [key, value] of Object.entries(row)) {
-		if (key === "name") continue;
-		if (Number(value) != null) return key;
+		if (key !== "name" && Number.isFinite(Number(value))) return key;
 	}
 	return null;
 }
@@ -224,33 +212,14 @@ export interface MapHighlightOptions {
 }
 
 export function seriesToMapHighlights(
-	rows: ReadonlyArray<{
-		readonly name: string;
-		readonly [x: string]: string | number;
-	}>,
+	rows: SeriesRows,
 	metricKey: string | null,
 	options: MapHighlightOptions = {},
 ): ReadonlyArray<MapChartHighlight> {
-	if (rows.length === 0) return [];
-
-	const [firstRow] = rows;
-	if (firstRow === undefined) return [];
-	const valueKey = resolveSeriesValueKey(firstRow, metricKey);
-	if (valueKey == null) return [];
-
-	const values: number[] = [];
-	const entries: Array<{ country: string; value: number }> = [];
-
-	for (const row of rows) {
-		const raw = row[valueKey];
-		const value = Number(raw);
-		if (value == null) continue;
-		values.push(value);
-		entries.push({ country: row.name, value });
-	}
-
+	const entries = rowsToEntries(rows, metricKey);
 	if (entries.length === 0) return [];
 
+	const values = entries.map((entry) => entry.value);
 	const min = Math.min(...values);
 	const max = Math.max(...values);
 	const palette = resolveChartPalette(
@@ -259,32 +228,12 @@ export function seriesToMapHighlights(
 	);
 	const fillColor = getChartColor(palette, 1);
 
-	return entries.map((entry) => ({
-		country: entry.country,
-		color: valueToMapFillColor(entry.value, min, max, fillColor),
-	}));
-}
-
-function valueToMapFillColor(
-	value: number,
-	min: number,
-	max: number,
-	fillColor: string,
-): string {
-	const opacity = min === max ? 1 : 0.2 + ((value - min) * 0.8) / (max - min);
-	return blendWithBackground(fillColor, opacity);
-}
-
-function blendWithBackground(hex: string, alpha: number): string {
-	const r = Number.parseInt(hex.slice(1, 3), 16);
-	const g = Number.parseInt(hex.slice(3, 5), 16);
-	const b = Number.parseInt(hex.slice(5, 7), 16);
-	const bg = theme.surface;
-	const bgR = Number.parseInt(bg.slice(1, 3), 16);
-	const bgG = Number.parseInt(bg.slice(3, 5), 16);
-	const bgB = Number.parseInt(bg.slice(5, 7), 16);
-	const mix = (c: number, bgC: number) =>
-		Math.round(c * alpha + bgC * (1 - alpha));
-	const toHex = (n: number) => n.toString(16).padStart(2, "0");
-	return `#${toHex(mix(r, bgR))}${toHex(mix(g, bgG))}${toHex(mix(b, bgB))}`;
+	return entries.map((entry) => {
+		const opacity =
+			min === max ? 1 : 0.2 + ((entry.value - min) * 0.8) / (max - min);
+		return {
+			country: entry.name,
+			color: blendHexOnBackground(fillColor, theme.surface, opacity),
+		};
+	});
 }

@@ -103,7 +103,7 @@ export function prepareLineAreaChartData(
 	return {
 		series: descriptors.map(({ dataKey, label }) => ({
 			label,
-			values: rows.map((row) => Number(row[dataKey]) ?? 0),
+			values: rows.map((row) => Number(row[dataKey]) || 0),
 		})),
 	};
 }
@@ -118,16 +118,15 @@ export function prepareBarChartData(
 	}
 	const isTimeGrouped = flowMeta?.hasTimeGroup ?? false;
 
-	const chartRows = rows;
 	const series = getChartSeries({
-		rows: chartRows,
+		rows,
 		metrics: queryConfig?.metrics ?? [],
 		outputDescriptors: flowMeta?.outputs ?? [],
 	});
 	const metricKey = series[0]?.dataKey ?? resolveMetricKey(queryConfig);
 
 	return {
-		entries: parseSeriesEntries(chartRows, metricKey, { sort: "none" }),
+		entries: parseSeriesEntries(rows, metricKey, { sort: "none" }),
 		isTimeGrouped,
 		useDynamicColors: !isTimeGrouped && series.length === 1,
 	};

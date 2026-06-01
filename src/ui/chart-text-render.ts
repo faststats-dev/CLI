@@ -10,7 +10,6 @@ interface ChartLineSegment {
 
 export interface ColoredBarChartRow {
 	readonly segments: ReadonlyArray<ChartLineSegment>;
-	readonly muted?: boolean;
 }
 
 interface BarLayout {
@@ -50,7 +49,7 @@ export function renderCategoricalBarRows(
 	const max = Math.max(...entries.map((entry) => entry.value), 1);
 
 	for (const [index, entry] of entries.entries()) {
-		const color = getChartColor([...palette], index);
+		const color = getChartColor(palette, index);
 		const bar = barGeometry(
 			index,
 			entry.value,
@@ -68,13 +67,11 @@ export function renderCategoricalBarRows(
 	}));
 	rows.push({
 		segments: [{ text: "─".repeat(width), color: theme.textMuted }],
-		muted: true,
 	});
 
 	if (layout.label) {
 		rows.push({
 			segments: [{ text: layout.label, color: theme.textMuted }],
-			muted: true,
 		});
 	}
 

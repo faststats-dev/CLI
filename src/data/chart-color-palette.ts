@@ -182,7 +182,10 @@ function buildChartPalette(
 	return result;
 }
 
-export function getChartColor(palette: string[], index: number): string {
+export function getChartColor(
+	palette: ReadonlyArray<string>,
+	index: number,
+): string {
 	if (!palette.length) return DEFAULT_CHART_COLOR;
 	const normalizedIndex =
 		((index % palette.length) + palette.length) % palette.length;
@@ -193,7 +196,6 @@ interface RgbColor {
 	readonly r: number;
 	readonly g: number;
 	readonly b: number;
-	readonly a?: number;
 }
 
 function parseColor(color: string): RgbColor | null {
@@ -207,15 +209,12 @@ function parseColor(color: string): RgbColor | null {
 }
 
 function formatRgb(rgb: RgbColor): string {
-	if (rgb.a != null && rgb.a < 1) {
-		return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${rgb.a})`;
-	}
 	const toHex = (value: number) =>
 		Math.round(value).toString(16).padStart(2, "0");
 	return `#${toHex(rgb.r)}${toHex(rgb.g)}${toHex(rgb.b)}`.toUpperCase();
 }
 
-function blendHexOnBackground(
+export function blendHexOnBackground(
 	foreground: string,
 	background: string,
 	alpha: number,

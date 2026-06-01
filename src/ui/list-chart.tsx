@@ -12,12 +12,11 @@ import { ChartEmptyState, type SeriesChartProps } from "./chart-shared.tsx";
 import { theme } from "./theme.ts";
 
 export function ListChart(props: SeriesChartProps) {
-	const rows = createMemo(() => {
-		const tabIndex = resolveListTabIndex(props.queryConfig);
-		return resolveSeriesRows(props.data, tabIndex);
-	});
 	const entries = createMemo(() =>
-		parseSeriesEntries(rows(), resolveMetricKey(props.queryConfig)),
+		parseSeriesEntries(
+			resolveSeriesRows(props.data, resolveListTabIndex(props.queryConfig)),
+			resolveMetricKey(props.queryConfig),
+		),
 	);
 	const showHeader = createMemo(() => props.innerHeight >= 3);
 	const maxValue = createMemo(() => {
@@ -29,7 +28,7 @@ export function ListChart(props: SeriesChartProps) {
 		const widths = entries().map(
 			(entry) => formatWidgetValue(entry.value).length,
 		);
-		return Math.max(5, ...widths, 5);
+		return Math.max(5, ...widths);
 	});
 	const metricLabel = () => resolveMetricKey(props.queryConfig) ?? "Value";
 

@@ -46,7 +46,6 @@ interface PreparedHeatmapChart {
 	readonly layout: HeatmapLayout;
 	readonly intensityFills: readonly string[];
 	readonly intensityScale: HeatmapIntensityScale;
-	readonly emptyColor: string;
 }
 
 export function HeatmapChart(props: HeatmapChartProps) {
@@ -89,49 +88,24 @@ export function HeatmapChart(props: HeatmapChartProps) {
 		const intensityScale = buildHeatmapIntensityScale(
 			displayMatrix.cells.map((cell) => cell.value),
 		);
-		const emptyColor = theme.border;
 
-		return {
-			displayMatrix,
-			layout,
-			intensityFills,
-			intensityScale,
-			emptyColor,
-		};
+		return { displayMatrix, layout, intensityFills, intensityScale };
 	});
 
 	return (
 		<Show when={prepared()} fallback={<ChartEmptyState message="No data" />}>
-			<HeatmapChartBodyInner
-				innerWidth={props.innerWidth}
-				innerHeight={props.innerHeight}
-				showLegend={props.showLegend ?? true}
-				getData={prepared}
-			/>
+			{(data: () => PreparedHeatmapChart) => (
+				<HeatmapChartBody
+					innerWidth={props.innerWidth}
+					innerHeight={props.innerHeight}
+					displayMatrix={data().displayMatrix}
+					layout={data().layout}
+					intensityFills={data().intensityFills}
+					intensityScale={data().intensityScale}
+					showLegend={props.showLegend ?? true}
+				/>
+			)}
 		</Show>
-	);
-}
-
-function HeatmapChartBodyInner(props: {
-	readonly innerWidth: number;
-	readonly innerHeight: number;
-	readonly showLegend: boolean;
-	readonly getData: () => PreparedHeatmapChart | null;
-}) {
-	const data = props.getData();
-	if (!data) return null;
-
-	return (
-		<HeatmapChartBody
-			innerWidth={props.innerWidth}
-			innerHeight={props.innerHeight}
-			displayMatrix={data.displayMatrix}
-			layout={data.layout}
-			intensityFills={data.intensityFills}
-			intensityScale={data.intensityScale}
-			emptyColor={data.emptyColor}
-			showLegend={props.showLegend}
-		/>
 	);
 }
 
@@ -142,7 +116,6 @@ function HeatmapChartBody(props: {
 	readonly layout: HeatmapLayout;
 	readonly intensityFills: readonly string[];
 	readonly intensityScale: HeatmapIntensityScale;
-	readonly emptyColor: string;
 	readonly showLegend: boolean;
 }) {
 	return (
@@ -156,7 +129,6 @@ function HeatmapChartBody(props: {
 					layout={props.layout}
 					intensityFills={props.intensityFills}
 					intensityScale={props.intensityScale}
-					emptyColor={props.emptyColor}
 					showLegend={props.showLegend}
 				/>
 			}
@@ -167,7 +139,6 @@ function HeatmapChartBody(props: {
 				displayMatrix={props.displayMatrix}
 				intensityFills={props.intensityFills}
 				intensityScale={props.intensityScale}
-				emptyColor={props.emptyColor}
 				showLegend={props.showLegend}
 			/>
 		</Show>
@@ -180,7 +151,6 @@ function HeatmapMosaicChart(props: {
 	readonly displayMatrix: HeatmapMatrix;
 	readonly intensityFills: readonly string[];
 	readonly intensityScale: HeatmapIntensityScale;
-	readonly emptyColor: string;
 	readonly showLegend: boolean;
 }) {
 	const items = createMemo(() => getHeatmapMosaicItems(props.displayMatrix));
@@ -188,12 +158,9 @@ function HeatmapMosaicChart(props: {
 		getHeatmapMosaicColumnCount(items().length),
 	);
 	const legendHeight = () => (props.showLegend ? 1 : 0);
-	const labelHeight = 1;
-	const cellHeight = 1;
-	const rowHeight = () => cellHeight + labelHeight;
 	const availableHeight = () => Math.max(1, props.innerHeight - legendHeight());
 	const maxRows = createMemo(() =>
-		Math.max(1, Math.floor(availableHeight() / rowHeight())),
+		Math.max(1, Math.floor(availableHeight() / 2)),
 	);
 	const visibleItems = createMemo(() =>
 		items().slice(0, maxRows() * columnCount()),
@@ -228,13 +195,13 @@ function HeatmapMosaicChart(props: {
 			>
 				<For each={rows()}>
 					{(rowItems) => (
-						<box flexDirection="row" height={rowHeight()} flexShrink={0}>
+						<box flexDirection="row" height={2} flexShrink={0}>
 							<For each={rowItems}>
 								{(item) => {
 									const fill = () =>
 										getHeatmapCellColor(
 											item.value,
-											props.emptyColor,
+											theme.border,
 											props.intensityScale,
 											props.intensityFills,
 										);
@@ -244,14 +211,10 @@ function HeatmapMosaicChart(props: {
 											width={tileWidth()}
 											flexShrink={0}
 										>
-											<text bg={fill()} fg={fill()} height={cellHeight}>
+											<text bg={fill()} fg={fill()} height={1}>
 												{"█".repeat(Math.max(1, tileWidth() - 1))}
 											</text>
-											<text
-												fg={theme.textMuted}
-												height={labelHeight}
-												flexShrink={0}
-											>
+											<text fg={theme.textMuted} height={1} flexShrink={0}>
 												{truncateLabel(
 													item.displayLabel,
 													Math.max(2, tileWidth()),
@@ -266,11 +229,7 @@ function HeatmapMosaicChart(props: {
 				</For>
 			</box>
 			<Show when={props.showLegend}>
-				<HeatmapLegend
-					emptyColor={props.emptyColor}
-					intensityFills={props.intensityFills}
-					innerWidth={props.innerWidth}
-				/>
+				<HeatmapLegend intensityFills={props.intensityFills} />
 			</Show>
 		</box>
 	);
@@ -283,7 +242,6 @@ function HeatmapGridChart(props: {
 	readonly layout: HeatmapLayout;
 	readonly intensityFills: readonly string[];
 	readonly intensityScale: HeatmapIntensityScale;
-	readonly emptyColor: string;
 	readonly showLegend: boolean;
 }) {
 	const labelColW = () => (props.layout === "calendar" ? 5 : 7);
@@ -398,7 +356,7 @@ function HeatmapGridChart(props: {
 										const fill = () =>
 											getHeatmapCellColor(
 												value(),
-												props.emptyColor,
+												theme.border,
 												props.intensityScale,
 												props.intensityFills,
 											);
@@ -420,26 +378,13 @@ function HeatmapGridChart(props: {
 				</For>
 			</box>
 			<Show when={props.showLegend}>
-				<HeatmapLegend
-					emptyColor={props.emptyColor}
-					intensityFills={props.intensityFills}
-					innerWidth={props.innerWidth}
-				/>
+				<HeatmapLegend intensityFills={props.intensityFills} />
 			</Show>
 		</box>
 	);
 }
 
-function HeatmapLegend(props: {
-	readonly emptyColor: string;
-	readonly intensityFills: readonly string[];
-	readonly innerWidth: number;
-}) {
-	const swatches = createMemo(() => [
-		props.emptyColor,
-		...props.intensityFills,
-	]);
-
+function HeatmapLegend(props: { readonly intensityFills: readonly string[] }) {
 	return (
 		<box
 			flexDirection="row"
@@ -452,7 +397,7 @@ function HeatmapLegend(props: {
 			<text fg={theme.textMuted} flexShrink={0}>
 				Quiet
 			</text>
-			<For each={swatches()}>
+			<For each={[theme.border, ...props.intensityFills]}>
 				{(fill) => (
 					<text bg={fill} fg={fill} flexShrink={0}>
 						{" "}

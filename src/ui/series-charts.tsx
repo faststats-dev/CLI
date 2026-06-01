@@ -208,7 +208,7 @@ export function LineAreaChart(props: LineAreaChartProps) {
 	);
 	const styledSeries = createMemo(() =>
 		prepared().series.map((entry, index) => {
-			const lineColor = getChartColor(palette(), index) ?? props.accent;
+			const lineColor = getChartColor(palette(), index);
 			const colors = resolveLineAreaSeriesStyle(lineColor);
 			return {
 				label: entry.label,
