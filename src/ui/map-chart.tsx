@@ -3,8 +3,8 @@ import { createMemo } from "solid-js";
 import {
 	type ChartData,
 	type ChartQueryConfig,
-	isSeriesResult,
 	resolveMetricKey,
+	resolveSeriesRows,
 	seriesToMapHighlights,
 } from "../data/chart-data.ts";
 import { BRAILLE_BASE, BRAILLE_DOT_BITS } from "./braille.ts";
@@ -27,9 +27,8 @@ export function MapChart(props: MapChartProps) {
 
 	const highlightMap = createMemo(() => {
 		const map = new Map<number, RGBA>();
-		if (!isSeriesResult(props.data)) return map;
 		const highlights = seriesToMapHighlights(
-			props.data,
+			resolveSeriesRows(props.data) ?? [],
 			resolveMetricKey(props.queryConfig),
 			{
 				chartColors: props.queryConfig?.visualOptions?.colors,

@@ -75,16 +75,6 @@ export function resolveWidgetMetric(
 	return isWidgetMetric(data) ? data : null;
 }
 
-export function isSeriesResult(
-	data: ChartData | null | undefined,
-): data is SeriesRows {
-	return (
-		Array.isArray(data) &&
-		(data.length === 0 ||
-			(typeof data[0] === "object" && data[0] != null && "name" in data[0]))
-	);
-}
-
 function isTabsResult(
 	data: ChartData | null | undefined,
 ): data is TabsChartData {
@@ -101,7 +91,7 @@ export function resolveSeriesRows(
 	tabIndex = 0,
 ): SeriesRows | null {
 	if (data == null) return null;
-	if (isSeriesResult(data)) return data;
+	if (Array.isArray(data)) return data;
 	if (isTabsResult(data)) {
 		const tabs = data.tabs;
 		if (Array.isArray(tabs)) {
