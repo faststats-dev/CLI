@@ -20,7 +20,7 @@ export type SeriesRows = ReadonlyArray<{
 	readonly [x: string]: string | number;
 }>;
 
-type TabsChartData = {
+export type TabsChartData = {
 	readonly tabs: ReadonlyArray<SeriesRows> | Record<string, SeriesRows>;
 };
 
@@ -75,24 +75,13 @@ export function resolveWidgetMetric(
 	return isWidgetMetric(data) ? data : null;
 }
 
-function isTabsResult(
-	data: ChartData | null | undefined,
-): data is TabsChartData {
-	return (
-		data != null &&
-		typeof data === "object" &&
-		"tabs" in data &&
-		data.tabs != null
-	);
-}
-
 export function resolveSeriesRows(
 	data: ChartData | null | undefined,
 	tabIndex = 0,
 ): SeriesRows | null {
 	if (data == null) return null;
 	if (Array.isArray(data)) return data;
-	if (isTabsResult(data)) {
+	if (typeof data === "object" && data != null && "tabs" in data) {
 		const tabs = data.tabs;
 		if (Array.isArray(tabs)) {
 			return tabs[tabIndex] ?? tabs[0] ?? null;
@@ -104,7 +93,7 @@ export function resolveSeriesRows(
 }
 
 export function parseSeriesEntries(
-	rows: SeriesRows | null | undefined,
+	rows: SeriesRows | null,
 	metricKey: string | null,
 	options: { readonly sort?: "desc" | "none" } = {},
 ): ReadonlyArray<SeriesEntry> {
