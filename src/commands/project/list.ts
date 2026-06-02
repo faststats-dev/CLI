@@ -1,6 +1,7 @@
 import { Console, Effect } from "effect";
 import { Command } from "effect/unstable/cli";
 import { FastStatsApi } from "../../api-client.ts";
+import { writeSlugCache } from "../../project-slugs.ts";
 
 export const projectListCommand = Command.make(
 	"list",
@@ -8,6 +9,8 @@ export const projectListCommand = Command.make(
 	Effect.fnUntraced(function* () {
 		const api = yield* FastStatsApi;
 		const response = yield* api.ProjectsListProjects(undefined);
+
+		yield* writeSlugCache(response.items.map((item) => item.slug));
 
 		if (response.items.length === 0) {
 			yield* Console.log("No projects found.");

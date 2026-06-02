@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { buildSlugCompletionLayer } from "../src/completions.ts";
 
 const shell = (process.argv[2] ?? "fish") as "fish" | "zsh" | "bash";
 if (shell !== "fish" && shell !== "zsh" && shell !== "bash") {
@@ -30,12 +31,14 @@ const proc = Bun.spawn([faststatsBin, "--completions", shell], {
 	stderr: "inherit",
 });
 
-const script = await new Response(proc.stdout).text();
+const baseScript = await new Response(proc.stdout).text();
 const exit = await proc.exited;
 if (exit !== 0) {
 	console.error(`faststats --completions ${shell} failed with code ${exit}`);
 	process.exit(exit);
 }
+
+const script = `${baseScript}\n${buildSlugCompletionLayer(shell, "faststats")}`;
 
 const home = homedir();
 const paths: Record<typeof shell, string> = {

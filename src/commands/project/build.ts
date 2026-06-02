@@ -1,23 +1,19 @@
-import { Effect } from "effect";
 import { Command } from "effect/unstable/cli";
-import { loadCachedProjectSlugs } from "../../project-slugs.ts";
 import { projectCreateCommand } from "./create.ts";
+import { datasourceCommand } from "./datasource/index.ts";
+import { hostnamesCommand } from "./hostnames.ts";
 import { projectListCommand } from "./list.ts";
-import { makeSlugScopedCommand } from "./slug-scope.ts";
+import { networkCommand } from "./network/index.ts";
+import { projectShowCommand } from "./show.ts";
 
-export const buildProjectCommand = Effect.gen(function* () {
-	const slugs = process.argv.includes("project")
-		? yield* loadCachedProjectSlugs
-		: [];
-
-	const slugCommands = slugs.map((slug) => makeSlugScopedCommand(slug));
-
-	return Command.make("project", {}).pipe(
-		Command.withDescription("Manage FastStats projects"),
-		Command.withSubcommands([
-			projectCreateCommand,
-			projectListCommand,
-			...slugCommands,
-		]),
-	);
-});
+export const projectCommand = Command.make("project", {}).pipe(
+	Command.withDescription("Manage FastStats projects"),
+	Command.withSubcommands([
+		projectCreateCommand,
+		projectListCommand,
+		projectShowCommand,
+		networkCommand,
+		hostnamesCommand,
+		datasourceCommand,
+	]),
+);
