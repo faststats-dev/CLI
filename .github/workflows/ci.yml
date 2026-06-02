@@ -5,6 +5,9 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   build:
     name: Build & Typecheck
@@ -26,3 +29,6 @@ jobs:
 
       - name: Build
         run: bun run build
+
+      - name: Publish preview release
+        run: bun run pkg-pr-new publish --bin --bun --commentWithSha

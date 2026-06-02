@@ -1,8 +1,8 @@
 {
 	"name": "@faststats/cli",
+	"version": "0.0.0",
 	"module": "src/index.ts",
 	"type": "module",
-	"private": true,
 	"bin": {
 		"faststats": "./src/index.ts"
 	},
@@ -26,7 +26,8 @@
 		"@types/geojson": "^7946.0.16",
 		"@types/topojson-client": "^3.1.5",
 		"@types/topojson-specification": "^1.0.5",
-		"knip": "^6.14.2"
+		"knip": "^6.14.2",
+		"pkg-pr-new": "^0.0.75"
 	},
 	"peerDependencies": {
 		"typescript": "^5"
