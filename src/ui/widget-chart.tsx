@@ -36,33 +36,33 @@ export function WidgetChart(props: WidgetChartProps) {
 
 	const compact = () =>
 		props.queryConfig?.visualOptions?.widget?.displayMode === "compact";
-	const showFooter = () => showTrend() && !compact() && props.innerHeight >= 4;
+	const showTrendRow = () =>
+		showTrend() && !compact() && props.innerHeight >= 3;
 
 	return (
-		<box flexDirection="column" width="100%" height="100%" minHeight={0}>
-			<box
-				flexGrow={1}
-				flexShrink={1}
-				minHeight={0}
-				justifyContent="center"
-				alignItems="flex-start"
-			>
-				<text fg={props.accent} attributes={TextAttributes.BOLD} flexShrink={1}>
-					{valueText()}
-				</text>
-			</box>
-			<Show when={showFooter()}>
+		<box
+			flexDirection="column"
+			width="100%"
+			height="100%"
+			minHeight={0}
+			justifyContent="center"
+		>
+			<text fg={props.accent} attributes={TextAttributes.BOLD} flexShrink={1}>
+				{valueText()}
+			</text>
+			<Show when={showTrendRow()}>
 				<box
 					flexDirection="row"
 					height={1}
 					flexShrink={0}
-					justifyContent="space-between"
-					width="100%"
+					marginTop={1}
+					alignItems="center"
 				>
-					<text fg={theme.textMuted}>24h</text>
-					<text fg={trendInfo().color}>
-						{trendInfo().prefix}
-						{trendInfo().text}
+					<text fg={trendInfo().color} flexShrink={0}>
+						{trendInfo().arrow} {trendInfo().text}
+					</text>
+					<text fg={theme.textMuted} flexShrink={1}>
+						{"  vs 24h"}
 					</text>
 				</box>
 			</Show>

@@ -170,16 +170,16 @@ export function formatWidgetValue(
 export function formatWidgetTrend(trend: number): {
 	readonly text: string;
 	readonly color: string;
-	readonly prefix: string;
+	readonly arrow: string;
 } {
 	if (!Number.isFinite(trend) || trend === 0) {
-		return { text: "0%", color: theme.textMuted, prefix: "" };
+		return { text: "0%", color: theme.textMuted, arrow: "→" };
 	}
 	const abs = Math.abs(trend);
 	const text = `${abs >= 10 ? abs.toFixed(0) : percentFormatter.format(abs)}%`;
 	return trend > 0
-		? { text, color: theme.success, prefix: "+" }
-		: { text, color: theme.danger, prefix: "" };
+		? { text, color: theme.success, arrow: "▲" }
+		: { text, color: theme.danger, arrow: "▼" };
 }
 
 export function resolveMetricKey(
