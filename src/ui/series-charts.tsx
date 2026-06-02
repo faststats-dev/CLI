@@ -142,15 +142,27 @@ export function PieChart(props: PieChartProps) {
 				share: total() === 0 ? 0 : (entry.value / total()) * 100,
 			})),
 	);
-	const stacked = createMemo(() => {
+	const stackedSegments = createMemo(() => {
 		const width = Math.max(1, props.innerWidth);
-		if (total() <= 0) return "";
-		let line = "";
-		for (const item of legend()) {
-			const chars = Math.max(1, Math.round((item.share / 100) * width));
-			line += "█".repeat(chars);
-		}
-		return line.slice(0, width);
+		const items = legend();
+		if (total() <= 0 || items.length === 0) return [];
+
+		const segments: Array<{ color: string; chars: number }> = [];
+		let used = 0;
+		items.forEach((item, index) => {
+			const remaining = width - used;
+			if (remaining <= 0) return;
+			const chars =
+				index === items.length - 1
+					? remaining
+					: Math.min(
+							remaining,
+							Math.max(1, Math.round((item.share / 100) * width)),
+						);
+			segments.push({ color: item.color, chars });
+			used += chars;
+		});
+		return segments;
 	});
 
 	return (
@@ -160,9 +172,15 @@ export function PieChart(props: PieChartProps) {
 		>
 			<box flexDirection="column" width="100%" height="100%" minHeight={0}>
 				<Show when={props.innerHeight >= 2}>
-					<text fg={props.accent} height={1} flexShrink={0}>
-						{stacked()}
-					</text>
+					<box flexDirection="row" height={1} width="100%" flexShrink={0}>
+						<For each={stackedSegments()}>
+							{(segment) => (
+								<text fg={segment.color} flexShrink={0}>
+									{"█".repeat(segment.chars)}
+								</text>
+							)}
+						</For>
+					</box>
 				</Show>
 				<For each={legend()}>
 					{(item) => (
