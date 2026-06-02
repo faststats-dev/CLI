@@ -190,14 +190,27 @@ function drawGridLines(
 	buf: PixelBuffer,
 	chartBottom: number,
 	color: string,
-	lines: number,
+	min: number,
+	max: number,
+	step: number,
 ): void {
-	for (let index = 0; index <= lines; index++) {
-		const y = Math.round((index / lines) * chartBottom);
+	const values: number[] = [];
+	if (step > 0 && Number.isFinite(step)) {
+		for (let value = min; value <= max + step * 0.5; value += step) {
+			values.push(value);
+		}
+	} else {
+		for (let index = 0; index <= 3; index++) {
+			values.push(min + (index / 3) * (max - min));
+		}
+	}
+
+	for (const value of values) {
+		const y = valueToY(value, min, max, 0, chartBottom);
 		if (y < 0 || y >= buf.height) continue;
 		const rowBase = y * buf.width;
 		for (let x = 0; x < buf.width; x++) {
-			if (x % 6 === 0 && (buf.layer[rowBase + x] ?? LAYER_EMPTY) < 0) {
+			if ((buf.layer[rowBase + x] ?? LAYER_EMPTY) < 0) {
 				setPixel(buf, x, y, color, LAYER_GRID);
 			}
 		}
@@ -305,20 +318,26 @@ export function drawLineAreaChart(
 	charHeight: number,
 	palette: LineAreaChartPalette,
 	area: boolean,
+	bounds?: {
+		readonly min: number;
+		readonly max: number;
+		readonly step: number;
+	},
 ): void {
 	if (series.length === 0 || charWidth <= 0 || charHeight <= 0) return;
 
 	const allValues = series.flatMap((entry) => entry.values);
 	if (allValues.length === 0) return;
 
-	const min = Math.min(...allValues);
-	const max = Math.max(...allValues);
+	const min = bounds ? bounds.min : Math.min(...allValues);
+	const max = bounds ? bounds.max : Math.max(...allValues);
+	const step = bounds ? bounds.step : 0;
 	const dotWidth = Math.max(2, charWidth * 2);
 	const dotHeight = Math.max(4, charHeight * 4);
 	const chartBottom = dotHeight - 1;
 	const buf = getPixelBuffer(dotWidth, dotHeight);
 
-	drawGridLines(buf, chartBottom, palette.gridColor, 3);
+	drawGridLines(buf, chartBottom, palette.gridColor, min, max, step);
 
 	if (area) {
 		for (const entry of series) {

@@ -10,6 +10,11 @@ export interface LineAreaChartViewProps {
 	readonly innerWidth: number;
 	readonly innerHeight: number;
 	readonly area: boolean;
+	readonly bounds?: {
+		readonly min: number;
+		readonly max: number;
+		readonly step: number;
+	};
 }
 
 const LINE_AREA_CHART_PALETTE = resolveLineAreaChartPalette();
@@ -28,6 +33,7 @@ export function LineAreaChartView(props: LineAreaChartViewProps) {
 					height,
 					LINE_AREA_CHART_PALETTE,
 					props.area,
+					props.bounds,
 				);
 			}}
 		/>
