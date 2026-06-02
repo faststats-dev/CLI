@@ -12,6 +12,7 @@ import {
 import type { ChartsListCharts200, DashboardRecord } from "../api.ts";
 import type { ChartData, ChartFlowMetaLite } from "../data/chart-data.ts";
 import type { Project } from "../data/project.ts";
+import { Divider } from "./divider.tsx";
 import { HeatmapChart } from "./heatmap-chart.tsx";
 import { ListChart } from "./list-chart.tsx";
 import { MapChart } from "./map-chart.tsx";
@@ -211,7 +212,7 @@ function DashboardApp(props: {
 				</box>
 			</Show>
 
-			<box height={1} backgroundColor={theme.border} />
+			<Divider />
 
 			<Show
 				when={!loading()}
@@ -233,7 +234,7 @@ function DashboardApp(props: {
 				/>
 			</Show>
 
-			<box height={1} backgroundColor={theme.border} />
+			<Divider />
 
 			<box flexDirection="row" height={1} marginTop={1}>
 				<text fg={theme.textMuted} flexGrow={1} flexShrink={1}>

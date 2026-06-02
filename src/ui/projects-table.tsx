@@ -13,6 +13,7 @@ import {
 	Show,
 } from "solid-js";
 import type { Project } from "../data/project.ts";
+import { Divider } from "./divider.tsx";
 import { runOpenTui } from "./open-tui.ts";
 import { chartColor, theme } from "./theme.ts";
 
@@ -166,7 +167,7 @@ function ProjectsApp(props: ProjectsAppProps) {
 		>
 			<Header title={props.options.title} searchQuery={searchQuery()} />
 			<ColumnLabels />
-			<box height={1} backgroundColor={theme.border} flexShrink={0} />
+			<Divider />
 			<scrollbox
 				ref={list.bindScrollTarget}
 				flexGrow={1}
@@ -206,7 +207,7 @@ function ProjectsApp(props: ProjectsAppProps) {
 					</box>
 				</Show>
 			</scrollbox>
-			<box height={1} backgroundColor={theme.border} flexShrink={0} />
+			<Divider />
 			<Footer
 				visibleCount={visibleProjects().length}
 				totalCount={props.options.projects.length}
