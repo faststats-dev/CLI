@@ -231,20 +231,31 @@ export function LineAreaChart(props: LineAreaChartProps) {
 		>
 			<box flexDirection="column" width="100%" height="100%" minHeight={0}>
 				<Show when={showLegend()}>
-					<box flexDirection="row" height={1} width="100%" flexShrink={0}>
+					<box
+						flexDirection="row"
+						height={1}
+						width="100%"
+						flexShrink={0}
+						justifyContent="flex-end"
+					>
 						<For each={styledSeries()}>
-							{(item) => (
-								<box flexDirection="row" flexShrink={1} minWidth={0}>
+							{(item, index) => (
+								<box
+									flexDirection="row"
+									flexShrink={1}
+									minWidth={0}
+									marginLeft={index() === 0 ? 0 : 2}
+								>
 									<text fg={item.lineColor} flexShrink={0}>
-										{"● "}
+										{"▬ "}
 									</text>
-									<text fg={theme.textMuted} flexShrink={1}>
+									<text fg={theme.text} flexShrink={1}>
 										{truncateLabel(
 											item.label,
 											Math.max(
 												4,
 												Math.floor(
-													(props.innerWidth - styledSeries().length * 2) /
+													(props.innerWidth - styledSeries().length * 4) /
 														styledSeries().length,
 												),
 											),
