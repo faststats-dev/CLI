@@ -1,201 +1,45 @@
-import { homedir } from "node:os";
-import { join } from "node:path";
 import { secrets } from "bun";
 import { Data, Effect } from "effect";
-import * as FileSystem from "effect/FileSystem";
 
-class ConfigError extends Data.TaggedError("ConfigError")<{
+class SecretError extends Data.TaggedError("SecretError")<{
 	readonly message: string;
 }> {}
 
-export interface FastStatsConfig {
-	readonly apiUrl?: string;
-	readonly appUrl?: string;
-}
+const SERVICE = "dev.faststats.cli";
+const ACCESS_TOKEN = "access-token";
 
-export interface FastStatsCredentials extends FastStatsConfig {
-	readonly apiKey?: string;
-	readonly accessToken?: string;
-}
+const DEFAULT_API_URL = "https://api.faststats.dev";
+const DEFAULT_APP_URL = "https://faststats.dev";
 
-export type AuthMethod = "api-key" | "access-token";
-export type AuthSource = "environment" | "os-secrets";
+const normalize = (url: string) => url.replace(/\/$/, "");
 
-export type AuthStatus =
-	| {
-			readonly authenticated: true;
-			readonly method: AuthMethod;
-			readonly source: AuthSource;
-	  }
-	| { readonly authenticated: false };
-
-export const DEFAULT_API_URL = "http://localhost:4000";
-export const DEFAULT_APP_URL = "http://localhost:3000";
-
-export const CONFIG_DIR = join(homedir(), ".config", "faststats");
-export const CONFIG_PATH = join(CONFIG_DIR, "config.json");
-const SECRET_SERVICE = "dev.faststats.cli";
-const API_KEY_SECRET = "api-key";
-const ACCESS_TOKEN_SECRET = "access-token";
-
-const secretError = (action: string, name: string) => (error: unknown) =>
-	new ConfigError({
-		message:
-			error instanceof Error
-				? `Failed to ${action} ${name} in OS secrets: ${error.message}`
-				: `Failed to ${action} ${name} in OS secrets`,
-	});
-
-const getSecret = (name: string) =>
-	Effect.tryPromise({
-		try: () => secrets.get({ service: SECRET_SERVICE, name }),
-		catch: secretError("read", name),
-	});
-
-const setSecret = (name: string, value: string) =>
-	Effect.tryPromise({
-		try: () => secrets.set({ service: SECRET_SERVICE, name, value }),
-		catch: secretError("store", name),
-	});
-
-const deleteSecret = (name: string) =>
-	Effect.tryPromise({
-		try: () => secrets.delete({ service: SECRET_SERVICE, name }),
-		catch: secretError("delete", name),
-	});
-
-const deleteSecretIfPresent = (name: string) =>
-	Effect.gen(function* () {
-		const value = yield* getSecret(name);
-		if (value != null) {
-			yield* deleteSecret(name);
-		}
-	});
-
-const envOrSecret = (envValue: string | undefined, secretName: string) =>
-	envValue
-		? Effect.succeed(envValue)
-		: getSecret(secretName).pipe(Effect.map((value) => value ?? undefined));
-
-const parseConfig = (content: string) =>
-	Effect.try({
-		try: () => JSON.parse(content) as FastStatsConfig,
-		catch: (error) =>
-			new ConfigError({
-				message:
-					error instanceof Error
-						? `Failed to parse ${CONFIG_PATH}: ${error.message}`
-						: `Failed to parse ${CONFIG_PATH}`,
-			}),
-	});
-
-export const loadConfig = Effect.gen(function* () {
-	const fs = yield* FileSystem.FileSystem;
-	const exists = yield* fs.exists(CONFIG_PATH);
-	if (!exists) {
-		return {} satisfies FastStatsConfig;
-	}
-	const content = yield* fs.readFileString(CONFIG_PATH);
-	return yield* parseConfig(content);
-});
-
-export const loadAuthStatus = Effect.gen(function* () {
-	if (process.env.FASTSTATS_API_KEY) {
-		return {
-			authenticated: true,
-			method: "api-key",
-			source: "environment",
-		} satisfies AuthStatus;
-	}
-	if (process.env.FASTSTATS_ACCESS_TOKEN) {
-		return {
-			authenticated: true,
-			method: "access-token",
-			source: "environment",
-		} satisfies AuthStatus;
-	}
-
-	const apiKey = yield* getSecret(API_KEY_SECRET);
-	if (apiKey != null) {
-		return {
-			authenticated: true,
-			method: "api-key",
-			source: "os-secrets",
-		} satisfies AuthStatus;
-	}
-
-	const accessToken = yield* getSecret(ACCESS_TOKEN_SECRET);
-	if (accessToken != null) {
-		return {
-			authenticated: true,
-			method: "access-token",
-			source: "os-secrets",
-		} satisfies AuthStatus;
-	}
-
-	return { authenticated: false } satisfies AuthStatus;
-});
-
-export const loadCredentials = Effect.gen(function* () {
-	const fileConfig = yield* loadConfig;
-	const [apiKey, accessToken] = yield* Effect.all(
-		[
-			envOrSecret(process.env.FASTSTATS_API_KEY, API_KEY_SECRET),
-			envOrSecret(process.env.FASTSTATS_ACCESS_TOKEN, ACCESS_TOKEN_SECRET),
-		],
-		{ concurrency: 2 },
-	);
-	return {
-		...fileConfig,
-		apiKey,
-		accessToken,
-	} satisfies FastStatsCredentials;
-});
-
-export const saveConfig = (config: FastStatsConfig) =>
-	Effect.gen(function* () {
-		const fs = yield* FileSystem.FileSystem;
-		const fileConfig = {
-			...(config.apiUrl ? { apiUrl: config.apiUrl } : {}),
-			...(config.appUrl ? { appUrl: config.appUrl } : {}),
-		} satisfies FastStatsConfig;
-		yield* fs.makeDirectory(CONFIG_DIR, { recursive: true });
-		yield* fs.writeFileString(
-			CONFIG_PATH,
-			`${JSON.stringify(fileConfig, null, 2)}\n`,
-		);
-	});
-
-export const saveApiKey = (apiKey: string) =>
-	Effect.gen(function* () {
-		yield* setSecret(API_KEY_SECRET, apiKey);
-		yield* deleteSecretIfPresent(ACCESS_TOKEN_SECRET);
-	});
-
-export const saveAccessToken = (accessToken: string) =>
-	Effect.gen(function* () {
-		yield* setSecret(ACCESS_TOKEN_SECRET, accessToken);
-		yield* deleteSecretIfPresent(API_KEY_SECRET);
-	});
-
-export const clearStoredCredentials = Effect.all(
-	[
-		deleteSecretIfPresent(API_KEY_SECRET),
-		deleteSecretIfPresent(ACCESS_TOKEN_SECRET),
-	],
-	{ discard: true },
+export const apiUrl = normalize(
+	process.env.FASTSTATS_API_URL ?? DEFAULT_API_URL,
+);
+export const appUrl = normalize(
+	process.env.FASTSTATS_APP_URL ?? DEFAULT_APP_URL,
 );
 
-export const resolveCredentials = (credentials: FastStatsCredentials) => ({
-	apiKey: credentials.apiKey,
-	accessToken: credentials.accessToken,
-	apiUrl:
-		process.env.FASTSTATS_API_URL ?? credentials.apiUrl ?? DEFAULT_API_URL,
-	appUrl:
-		process.env.FASTSTATS_APP_URL ?? credentials.appUrl ?? DEFAULT_APP_URL,
-});
+const secretError = (action: string) => (error: unknown) =>
+	new SecretError({
+		message: `Failed to ${action} access token: ${
+			error instanceof Error ? error.message : String(error)
+		}`,
+	});
 
-export const maskSecret = (value: string): string => {
-	if (value.length <= 8) return "****";
-	return `${value.slice(0, 4)}…${value.slice(-4)}`;
-};
+export const loadAccessToken = Effect.tryPromise({
+	try: () => secrets.get({ service: SERVICE, name: ACCESS_TOKEN }),
+	catch: secretError("read"),
+}).pipe(Effect.map((value) => value ?? undefined));
+
+export const saveAccessToken = (accessToken: string) =>
+	Effect.tryPromise({
+		try: () =>
+			secrets.set({ service: SERVICE, name: ACCESS_TOKEN, value: accessToken }),
+		catch: secretError("store"),
+	});
+
+export const clearAccessToken = Effect.tryPromise({
+	try: () => secrets.delete({ service: SERVICE, name: ACCESS_TOKEN }),
+	catch: secretError("delete"),
+}).pipe(Effect.ignore);

@@ -1,12 +1,13 @@
+import { homedir } from "node:os";
 import { join } from "node:path";
 import { Clock, Effect, Option } from "effect";
 import * as FileSystem from "effect/FileSystem";
 import type { ProjectsGetProject200 } from "./api.ts";
 import { FastStatsApi } from "./api-client.ts";
-import { CONFIG_DIR } from "./config.ts";
 
-const SLUG_CACHE_PATH = join(CONFIG_DIR, "cache", "project-slugs.json");
-const SLUG_CACHE_TTL_MS = 5 * 60 * 1000;
+const CACHE_DIR = join(homedir(), ".cache", "faststats");
+const CACHE_PATH = join(CACHE_DIR, "slugs.json");
+const CACHE_TTL_MS = 5 * 60 * 1000;
 
 interface SlugCache {
 	readonly updatedAt: number;
@@ -18,49 +19,39 @@ export const isWebProject = (
 ): project is Extract<ProjectsGetProject200, { allowedHostnames: unknown }> =>
 	"allowedHostnames" in project;
 
-const listProjectSlugs = Effect.gen(function* () {
+const fetchSlugs = Effect.gen(function* () {
 	const api = yield* FastStatsApi;
-	const response = yield* api.ProjectsListProjects(undefined);
-	return response.items.map((item) => item.slug);
+	const { items } = yield* api.ProjectsListProjects(undefined);
+	return items.map((item) => item.slug);
 });
 
-const readSlugCache = Effect.gen(function* () {
-	const fs = yield* FileSystem.FileSystem;
-	if (!(yield* fs.exists(SLUG_CACHE_PATH))) {
-		return Option.none<SlugCache>();
-	}
-	const content = yield* fs.readFileString(SLUG_CACHE_PATH);
-	const parsed = yield* Effect.try({
-		try: () => JSON.parse(content) as SlugCache,
-		catch: () => new Error(`Failed to parse ${SLUG_CACHE_PATH}`),
-	});
-	return Option.some(parsed);
-}).pipe(Effect.orElseSucceed(() => Option.none<SlugCache>()));
-
-const writeSlugCache = (slugs: ReadonlyArray<string>) =>
-	Effect.gen(function* () {
-		const fs = yield* FileSystem.FileSystem;
-		const updatedAt = yield* Clock.currentTimeMillis;
-		yield* fs.makeDirectory(join(CONFIG_DIR, "cache"), { recursive: true });
-		yield* fs.writeFileString(
-			SLUG_CACHE_PATH,
-			JSON.stringify({ updatedAt, slugs } satisfies SlugCache),
-		);
-	}).pipe(Effect.ignore);
-
 export const loadCachedProjectSlugs = Effect.gen(function* () {
+	const fs = yield* FileSystem.FileSystem;
 	const now = yield* Clock.currentTimeMillis;
-	const cache = yield* readSlugCache;
 
-	if (Option.isSome(cache) && now - cache.value.updatedAt < SLUG_CACHE_TTL_MS) {
-		return cache.value.slugs;
+	const cached = yield* fs.readFileString(CACHE_PATH).pipe(
+		Effect.map((content) => JSON.parse(content) as SlugCache),
+		Effect.option,
+	);
+	if (Option.isSome(cached) && now - cached.value.updatedAt < CACHE_TTL_MS) {
+		return cached.value.slugs;
 	}
 
-	const fetched = yield* Effect.option(listProjectSlugs);
+	const fetched = yield* Effect.option(fetchSlugs);
 	if (Option.isSome(fetched)) {
-		yield* writeSlugCache(fetched.value);
+		yield* fs
+			.makeDirectory(CACHE_DIR, { recursive: true })
+			.pipe(
+				Effect.andThen(
+					fs.writeFileString(
+						CACHE_PATH,
+						JSON.stringify({ updatedAt: now, slugs: fetched.value }),
+					),
+				),
+				Effect.ignore,
+			);
 		return fetched.value;
 	}
 
-	return Option.isSome(cache) ? cache.value.slugs : [];
+	return Option.isSome(cached) ? cached.value.slugs : [];
 });

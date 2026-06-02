@@ -1,5 +1,5 @@
 import { Console, Effect } from "effect";
-import { saveAccessToken, saveConfig } from "../config.ts";
+import { apiUrl, appUrl, saveAccessToken } from "../config.ts";
 
 const CLIENT_ID = "faststats-cli";
 const DEVICE_GRANT_TYPE =
@@ -128,33 +128,31 @@ const pollForToken = (
 		}
 	});
 
-export const runDeviceLogin = (apiUrl: string, appUrl: string) =>
-	Effect.gen(function* () {
-		const authBaseUrl = `${apiUrl.replace(/\/$/, "")}/auth`;
+export const runDeviceLogin = Effect.gen(function* () {
+	const authBaseUrl = `${apiUrl}/auth`;
 
-		yield* Console.log("Requesting device authorization...");
-		const device = yield* postJson<DeviceCodeResponse>(
-			`${authBaseUrl}/device/code`,
-			{ client_id: CLIENT_ID, scope: "openid profile email" },
-		);
+	yield* Console.log("Requesting device authorization...");
+	const device = yield* postJson<DeviceCodeResponse>(
+		`${authBaseUrl}/device/code`,
+		{ client_id: CLIENT_ID, scope: "openid profile email" },
+	);
 
-		const verificationUrl = resolveVerificationUrl(
-			device.verification_uri_complete ?? device.verification_uri,
-			appUrl,
-		);
+	const verificationUrl = resolveVerificationUrl(
+		device.verification_uri_complete ?? device.verification_uri,
+		appUrl,
+	);
 
-		yield* Console.log(`Open this URL: ${verificationUrl}`);
-		yield* Console.log(`Enter code: ${device.user_code}`);
-		yield* openBrowser(verificationUrl);
-		yield* Console.log("Waiting for approval...");
+	yield* Console.log(`Open this URL: ${verificationUrl}`);
+	yield* Console.log(`Enter code: ${device.user_code}`);
+	yield* openBrowser(verificationUrl);
+	yield* Console.log("Waiting for approval...");
 
-		const accessToken = yield* pollForToken(
-			authBaseUrl,
-			device.device_code,
-			device.interval ?? 5,
-		);
+	const accessToken = yield* pollForToken(
+		authBaseUrl,
+		device.device_code,
+		device.interval ?? 5,
+	);
 
-		yield* saveAccessToken(accessToken);
-		yield* saveConfig({ apiUrl, appUrl });
-		yield* Console.log("Logged in. Stored access token in OS secrets.");
-	});
+	yield* saveAccessToken(accessToken);
+	yield* Console.log("Logged in. Stored access token in OS secrets.");
+});

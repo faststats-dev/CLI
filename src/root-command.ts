@@ -1,6 +1,5 @@
 import { Effect } from "effect";
 import { Command } from "effect/unstable/cli";
-import { configCommand } from "./commands/config.ts";
 import { dashboardCommand } from "./commands/dashboard.ts";
 import { loginCommand } from "./commands/login.ts";
 import { logoutCommand } from "./commands/logout.ts";
@@ -15,7 +14,6 @@ export const buildRootCommand = Effect.gen(function* () {
 		Command.withSubcommands([
 			dashboardCommand,
 			projectCommand,
-			configCommand,
 			loginCommand,
 			logoutCommand,
 			statusCommand,

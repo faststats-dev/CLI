@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { loadCredentials, resolveCredentials } from "../config.ts";
+import { apiUrl, loadAccessToken } from "../config.ts";
 
 export interface OrganizationSummary {
 	readonly id: string;
@@ -48,19 +48,13 @@ const authRequest = <T>(
 	});
 
 export const resolveAccessToken = Effect.gen(function* () {
-	const credentials = yield* loadCredentials;
-	const { accessToken, apiUrl } = resolveCredentials(credentials);
+	const accessToken = yield* loadAccessToken;
 	if (!accessToken) {
 		return yield* Effect.fail(
-			new Error(
-				"Organization selection requires an access token. Run faststats login or pass --org only when logged in.",
-			),
+			new Error("Organization selection requires login. Run faststats login."),
 		);
 	}
-	return {
-		accessToken,
-		authBaseUrl: `${apiUrl.replace(/\/$/, "")}/auth`,
-	};
+	return { accessToken, authBaseUrl: `${apiUrl}/auth` };
 });
 
 export const listOrganizations = (authBaseUrl: string, accessToken: string) =>
