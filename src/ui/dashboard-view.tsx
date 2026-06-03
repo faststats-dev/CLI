@@ -78,19 +78,13 @@ function DashboardApp(props: {
 	onExit: () => void;
 }) {
 	const dashboards = () => props.options.dashboards;
-	const [tab, setTab] = createSignal(
-		Math.max(
-			0,
-			dashboards().findIndex((d) => d.isDefault),
-		),
-	);
-	const dashboard = createMemo(() => dashboards()[tab()]);
+	const [tab, setTab] = createSignal(0);
 	const [charts, setCharts] = createSignal<ReadonlyArray<DashboardChart>>([]);
 	const [loading, setLoading] = createSignal(false);
 	const cache = new Map<string, ReadonlyArray<DashboardChart>>();
 
 	createEffect(() => {
-		const dash = dashboard();
+		const dash = dashboards()[tab()];
 		if (!dash) {
 			setCharts([]);
 			setLoading(false);
@@ -107,7 +101,7 @@ function DashboardApp(props: {
 		setLoading(true);
 		setCharts([]);
 		void props.options.loadDashboard(id).then((loaded) => {
-			if (!active || dashboard()?.id !== id) return;
+			if (!active || dashboards()[tab()]?.id !== id) return;
 			cache.set(id, loaded);
 			setCharts(loaded);
 			setLoading(false);
@@ -224,7 +218,7 @@ function DashboardApp(props: {
 			>
 				<DashboardGrid
 					charts={charts()}
-					dashboardId={dashboard()?.id ?? null}
+					dashboardId={dashboards()[tab()]?.id ?? null}
 					preferredChartColors={props.options.project.preferredChartColors}
 				/>
 			</Show>
@@ -233,7 +227,8 @@ function DashboardApp(props: {
 
 			<box flexDirection="row" height={1} marginTop={1}>
 				<text fg={theme.textMuted} flexGrow={1} flexShrink={1}>
-					{dashboard()?.name ?? "No dashboards"} · {charts().length} chart
+					{dashboards()[tab()]?.name ?? "No dashboards"} · {charts().length}{" "}
+					chart
 					{charts().length === 1 ? "" : "s"}
 				</text>
 				<text fg={theme.textMuted}>{footerPos()} · live</text>
@@ -376,6 +371,7 @@ function ChartTile(props: {
 	const innerWidth = () => Math.max(1, width() - 4);
 	const innerHeight = () => Math.max(1, height() - 2);
 	const series = {
+		preferredChartColors: props.preferredChartColors,
 		get data() {
 			return props.chart.data;
 		},
@@ -392,7 +388,6 @@ function ChartTile(props: {
 			return innerHeight();
 		},
 	};
-	const colors = () => props.preferredChartColors;
 
 	let body: JSX.Element;
 	switch (props.chart.chartType) {
@@ -403,16 +398,10 @@ function ChartTile(props: {
 			body = <ListChart {...series} />;
 			break;
 		case "bar":
-			body = (
-				<BarChart
-					{...series}
-					flowMeta={props.chart.flowMeta}
-					preferredChartColors={colors()}
-				/>
-			);
+			body = <BarChart {...series} flowMeta={props.chart.flowMeta} />;
 			break;
 		case "pie":
-			body = <PieChart {...series} preferredChartColors={colors()} />;
+			body = <PieChart {...series} />;
 			break;
 		case "line":
 		case "area":
@@ -421,19 +410,17 @@ function ChartTile(props: {
 					{...series}
 					chartType={props.chart.chartType}
 					flowMeta={props.chart.flowMeta}
-					preferredChartColors={colors()}
 				/>
 			);
 			break;
 		case "map":
-			body = <MapChart {...series} preferredChartColors={colors()} />;
+			body = <MapChart {...series} />;
 			break;
 		case "heatmap":
 			body = (
 				<HeatmapChart
 					{...series}
 					flowMeta={props.chart.flowMeta}
-					preferredChartColors={colors()}
 					showLegend={
 						props.chart.queryConfig?.visualOptions?.heatmap?.showLegend ?? true
 					}
@@ -477,29 +464,17 @@ function ChartTile(props: {
 }
 
 function layoutCharts(charts: ReadonlyArray<DashboardChart>) {
-	const finite = (value: number, min: number, max: number) => {
-		const n = Math.round(Number(value));
-		return Number.isFinite(n) ? Math.max(min, Math.min(max, n)) : min;
-	};
-
-	let nextY = 0;
+	let stackY = 0;
 	return charts.map((chart) => {
-		const raw = chart.position;
-		if (raw) {
-			const w = finite(Number(raw.w), 1, GRID_COLS);
-			const h = finite(Number(raw.h), 1, 32);
-			const pos = {
-				x: finite(Number(raw.x), 0, GRID_COLS - w),
-				y: finite(Number(raw.y), 0, 1024),
-				w,
-				h,
-			};
-			nextY = Math.max(nextY, pos.y + pos.h);
+		if (chart.position) {
+			const { x, y, w, h } = chart.position;
+			const pos = { x: +x, y: +y, w: +w, h: +h };
+			stackY = Math.max(stackY, pos.y + pos.h);
 			return { chart, pos };
 		}
 		const size = CHART_SIZES[chart.chartType] ?? DEFAULT_CHART_SIZE;
-		const pos = { x: 0, y: nextY, w: size.w, h: size.h };
-		nextY += size.h;
+		const pos = { x: 0, y: stackY, ...size };
+		stackY += size.h;
 		return { chart, pos };
 	});
 }
