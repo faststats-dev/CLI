@@ -1,6 +1,8 @@
-import { Cause, Console, Data, Effect } from "effect";
+import { Cause, Console, Data, Effect, Schema } from "effect";
 import * as Stdio from "effect/Stdio";
 import * as HttpClientError from "effect/unstable/http/HttpClientError";
+import { ForbiddenError, UnauthorizedError } from "./api.ts";
+import { isApiError } from "./api-client.ts";
 import { apiUrl, loadAccessToken } from "./config.ts";
 
 export const LOGIN_MESSAGE =
@@ -8,6 +10,11 @@ export const LOGIN_MESSAGE =
 
 export const SESSION_EXPIRED_MESSAGE =
 	"Unauthorized. Your session may have expired — run `faststats login` to sign in again.";
+
+const CREATE_PROJECT_PERMISSION_ERROR =
+	"You don't have permission to create projects in this organization.";
+
+const ApiMessage = Schema.Struct({ message: Schema.String });
 
 export class AuthError extends Data.TaggedError("AuthError")<{
 	readonly message: string;
@@ -30,8 +37,11 @@ export const authContext = requireAccessToken.pipe(
 	})),
 );
 
-const authMessage = (error: unknown): string | undefined => {
+export const failureMessage = (error: unknown): string | undefined => {
+	if (isApiError(error)) return failureMessage(error.cause);
+
 	if (error instanceof AuthError) return error.message;
+	if (Schema.is(UnauthorizedError)(error)) return SESSION_EXPIRED_MESSAGE;
 	if (
 		HttpClientError.isHttpClientError(error) &&
 		error.reason._tag === "StatusCodeError" &&
@@ -39,15 +49,26 @@ const authMessage = (error: unknown): string | undefined => {
 	) {
 		return SESSION_EXPIRED_MESSAGE;
 	}
-	const tag =
-		typeof error === "object" && error !== null && "_tag" in error
-			? error._tag
-			: undefined;
-	if (
-		tag === "UnauthorizedError" ||
-		(typeof tag === "string" && tag.endsWith("401"))
-	) {
-		return SESSION_EXPIRED_MESSAGE;
+	if (Schema.is(ForbiddenError)(error)) {
+		if (error.message === "Insufficient permissions") {
+			return CREATE_PROJECT_PERMISSION_ERROR;
+		}
+		return error.message;
+	}
+	if (Schema.is(ApiMessage)(error) && error.message.length > 0) {
+		return error.message;
+	}
+	if (HttpClientError.isHttpClientError(error)) {
+		const { reason } = error;
+		if (reason._tag === "StatusCodeError") {
+			const description = reason.description;
+			if (description !== undefined && description.length > 0) {
+				return description;
+			}
+		}
+	}
+	if (error instanceof Error && error.message.length > 0) {
+		return error.message;
 	}
 	return undefined;
 };
@@ -64,10 +85,10 @@ export const runCli = <A, E, R>(program: Effect.Effect<A, E, R>) =>
 		return yield* program;
 	}).pipe(
 		Effect.catchCause((cause) => {
-			const message = authMessage(Cause.squash(cause));
+			const message = failureMessage(Cause.squash(cause));
 			if (!message) return Effect.failCause(cause);
 			return Console.error(message).pipe(
-				Effect.andThen(Effect.fail(new AuthError({ message }) as E)),
+				Effect.andThen(Effect.fail(Cause.squash(cause) as E)),
 			);
 		}),
 	);

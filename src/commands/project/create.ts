@@ -1,4 +1,4 @@
-import { Cause, Console, Effect, Option } from "effect";
+import { Console, Effect, Option } from "effect";
 import { Command, Flag, Prompt } from "effect/unstable/cli";
 import { FastStatsApi } from "../../api-client.ts";
 import {
@@ -9,28 +9,12 @@ import {
 	resolveOrganizationByRef,
 	setActiveOrganization,
 } from "../../auth/organization-client.ts";
-import { authContext } from "../../auth.ts";
-import {
-	formatApiErrorMessage,
-	promptIfAbsent,
-} from "../../command-helpers.ts";
+import { authContext, failureMessage } from "../../auth.ts";
+import { promptIfAbsent } from "../../command-helpers.ts";
 import { ProjectNameSchema } from "../../project-validation.ts";
 import { validateWithSchema } from "../../validation.ts";
 
-const CREATE_PROJECT_PERMISSION_ERROR =
-	"You don't have permission to create projects in this organization.";
-
 const PROJECT_CREATE_TEMPLATE_ID = "minecraft-plugin";
-
-const formatApiError = (error: unknown): string =>
-	typeof error === "object" &&
-	error !== null &&
-	"_tag" in error &&
-	error._tag === "ForbiddenError" &&
-	"message" in error &&
-	error.message === "Insufficient permissions"
-		? CREATE_PROJECT_PERMISSION_ERROR
-		: formatApiErrorMessage(error, "Failed to create project");
 
 const resolveInteractiveOrganization = (
 	authBaseUrl: string,
@@ -187,20 +171,14 @@ export const projectCreateCommand = Command.make(
 			onSome: (value) => [value],
 		});
 
-		const project = yield* api
-			.ProjectsCreateProject({
-				payload: {
-					name,
-					private: isPrivate,
-					templateId: PROJECT_CREATE_TEMPLATE_ID,
-					allowedHostnames,
-				},
-			})
-			.pipe(
-				Effect.catchCause((cause) =>
-					Effect.fail(new Error(formatApiError(Cause.squash(cause)))),
-				),
-			);
+		const project = yield* api.ProjectsCreateProject({
+			payload: {
+				name,
+				private: isPrivate,
+				templateId: PROJECT_CREATE_TEMPLATE_ID,
+				allowedHostnames,
+			},
+		});
 
 		const updateResult = yield* Effect.result(
 			api.ProjectsUpdateProject(project.id, {
@@ -213,7 +191,7 @@ export const projectCreateCommand = Command.make(
 		);
 		if (updateResult._tag === "Failure") {
 			yield* Console.log(
-				`Warning: project created but feature settings could not be applied (${formatApiError(updateResult.failure)})`,
+				`Warning: project created but feature settings could not be applied (${failureMessage(updateResult.failure) ?? "request failed"})`,
 			);
 		}
 

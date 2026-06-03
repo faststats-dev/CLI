@@ -2,7 +2,6 @@ import { Console, Effect } from "effect";
 import { Argument, Command, Flag, Prompt } from "effect/unstable/cli";
 import type { DataSourceRecord } from "../../../api.ts";
 import { FastStatsApi } from "../../../api-client.ts";
-import { withApiError } from "../../../command-helpers.ts";
 import {
 	DataSourceNameSchema,
 	ReferenceIdSchema,
@@ -167,9 +166,10 @@ export const datasourceEditCommand = Command.make(
 		const hasFlags = Object.values(flags).some((v) => v !== undefined);
 		const payload = hasFlags ? flags : yield* promptEdits(current);
 
-		const updated = yield* withApiError(
-			api.DataSourcesUpdateDataSource(params.slug, current.id, { payload }),
-			"Data source request failed",
+		const updated = yield* api.DataSourcesUpdateDataSource(
+			params.slug,
+			current.id,
+			{ payload },
 		);
 
 		yield* logDataSource("Updated", updated);
