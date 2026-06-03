@@ -3,7 +3,6 @@ import { createMemo, For, Show } from "solid-js";
 import {
 	formatWidgetValue,
 	parseSeriesEntries,
-	resolveListTabIndex,
 	resolveMetricKey,
 	resolveSeriesRows,
 	truncateLabel,
@@ -14,7 +13,10 @@ import { theme } from "./theme.ts";
 export function ListChart(props: SeriesChartProps) {
 	const entries = createMemo(() =>
 		parseSeriesEntries(
-			resolveSeriesRows(props.data, resolveListTabIndex(props.queryConfig)),
+			resolveSeriesRows(
+				props.data,
+				props.queryConfig?.visualOptions?.list?.selectedTabIndex ?? 0,
+			),
 			resolveMetricKey(props.queryConfig),
 		),
 	);

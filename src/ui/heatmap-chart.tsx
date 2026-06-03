@@ -5,11 +5,7 @@ import {
 	resolveChartPalette,
 } from "../data/chart-color-palette.ts";
 import type { ChartFlowMetaLite } from "../data/chart-data.ts";
-import {
-	resolveListTabIndex,
-	resolveSeriesRows,
-	truncateLabel,
-} from "../data/chart-data.ts";
+import { resolveSeriesRows, truncateLabel } from "../data/chart-data.ts";
 import {
 	buildHeatmapIntensityScale,
 	buildHeatmapMatrix,
@@ -52,7 +48,7 @@ export function HeatmapChart(props: HeatmapChartProps) {
 	const prepared = createMemo((): PreparedHeatmapChart | null => {
 		const rows = resolveSeriesRows(
 			props.data,
-			resolveListTabIndex(props.queryConfig),
+			props.queryConfig?.visualOptions?.list?.selectedTabIndex ?? 0,
 		);
 		if (!rows || rows.length === 0) return null;
 

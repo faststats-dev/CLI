@@ -5,17 +5,17 @@
     "": {
       "name": "faststats-cli",
       "dependencies": {
-        "@effect/platform-bun": "^4.0.0-beta.70",
+        "@effect/platform-bun": "^4.0.0-beta.76",
         "@opentui/core": "^0.3.1",
         "@opentui/solid": "^0.3.1",
-        "effect": "^4.0.0-beta.70",
+        "effect": "^4.0.0-beta.76",
         "solid-js": "^1.9.13",
         "topojson-client": "^3.1.0",
         "world-atlas": "^2.0.2",
       },
       "devDependencies": {
         "@biomejs/biome": "2.4.16",
-        "@effect/openapi-generator": "^4.0.0-beta.70",
+        "@effect/openapi-generator": "^4.0.0-beta.76",
         "@types/bun": "latest",
         "@types/geojson": "^7946.0.16",
         "@types/topojson-client": "^3.1.5",
@@ -105,13 +105,13 @@
 
     "@biomejs/cli-win32-x64": ["@biomejs/cli-win32-x64@2.4.16", "", { "os": "win32", "cpu": "x64" }, "sha512-Kp85jgoBHa05gix6UIRjfCDiUV3w/8VIdZ247VyyO2gEjaw12WEVhdIjlxp/AMzXxqxQwbxNTDVZ3Mwd2RG5rw=="],
 
-    "@effect/openapi-generator": ["@effect/openapi-generator@4.0.0-beta.75", "", { "peerDependencies": { "@effect/platform-node": "^4.0.0-beta.75", "effect": "^4.0.0-beta.75" }, "bin": { "openapigen": "dist/bin.js" } }, "sha512-kuVREGa2Es8F2cvAcC4kwI6FYPARVHeC66U+OXii7lKHMJO0MnB5kqxbjCJHS4TevCH6zX6cL4nRDdEuc5XcvA=="],
+    "@effect/openapi-generator": ["@effect/openapi-generator@4.0.0-beta.76", "", { "peerDependencies": { "@effect/platform-node": "^4.0.0-beta.76", "effect": "^4.0.0-beta.76" }, "bin": { "openapigen": "dist/bin.js" } }, "sha512-vEk6WNY1sc3Xw/JVfd0vLRraT2Xp4rjadd+K+OdU4eUJqJwplzyOcI/QiBLmW/EdvCHfNb77uQl6g6xXfgfq1w=="],
 
-    "@effect/platform-bun": ["@effect/platform-bun@4.0.0-beta.75", "", { "dependencies": { "@effect/platform-node-shared": "^4.0.0-beta.75" }, "peerDependencies": { "effect": "^4.0.0-beta.75" } }, "sha512-OIIi1kI/DFkzgIHPzy7kqLI1VVbRVpq3HkgH72LHPjVt9mIO3+YXvt8rnjSmTGpSpjEzzBsas8rZ4cnFbYKESA=="],
+    "@effect/platform-bun": ["@effect/platform-bun@4.0.0-beta.76", "", { "dependencies": { "@effect/platform-node-shared": "^4.0.0-beta.76" }, "peerDependencies": { "effect": "^4.0.0-beta.76" } }, "sha512-vHQBj1qUmiHNGKu2wsm6Inui9hcGNwVpqfzb0UMfpkadR7ytM5c0wWIyoc8hf7rN6oL8GzxsdmCmh9Eyqzf/KQ=="],
 
     "@effect/platform-node": ["@effect/platform-node@4.0.0-beta.68", "", { "dependencies": { "@effect/platform-node-shared": "^4.0.0-beta.68", "mime": "^4.1.0", "undici": "^8.2.0" }, "peerDependencies": { "effect": "^4.0.0-beta.68", "ioredis": "^5.7.0" } }, "sha512-q2WakGBfZ5wIg9WdL4flbIwxC5TNFq1/qroT4HRT9yOl19dLg0khd2LE9ewOybOPrTQHV3PUyV3Sx6Y3eMYTWQ=="],
 
-    "@effect/platform-node-shared": ["@effect/platform-node-shared@4.0.0-beta.75", "", { "dependencies": { "@types/ws": "^8.18.1", "ws": "^8.20.0" }, "peerDependencies": { "effect": "^4.0.0-beta.75" } }, "sha512-ERxuFDuCuMAiSHLrNVTvSXPnUajcZV4PUVibXbk1lwiymhbkxRRBs1Zeuicwho8jZdpn7niXCDI24CiB9PIozA=="],
+    "@effect/platform-node-shared": ["@effect/platform-node-shared@4.0.0-beta.76", "", { "dependencies": { "@types/ws": "^8.18.1", "ws": "^8.20.0" }, "peerDependencies": { "effect": "^4.0.0-beta.76" } }, "sha512-htJyli8B7hidi5ANPskhy3cK19g3idNColSlSAqIC9lDAmLcLFQZqpOsUY3uBfSChps8HzhxRwVqWp9C/vsQXA=="],
 
     "@emnapi/core": ["@emnapi/core@1.10.0", "", { "dependencies": { "@emnapi/wasi-threads": "1.2.1", "tslib": "^2.4.0" } }, "sha512-yq6OkJ4p82CAfPl0u9mQebQHKPJkY7WrIuk205cTYnYe+k2Z8YBh11FrbRG/H6ihirqcacOgl2BIO8oyMQLeXw=="],
 
@@ -293,7 +293,7 @@
 
     "diff": ["diff@9.0.0", "", {}, "sha512-svtcdpS8CgJyqAjEQIXdb3OjhFVVYjzGAPO8WGCmRbrml64SPw/jJD4GoE98aR7r25A0XcgrK3F02yw9R/vhQw=="],
 
-    "effect": ["effect@4.0.0-beta.75", "", { "dependencies": { "@standard-schema/spec": "^1.1.0", "fast-check": "^4.8.0", "find-my-way-ts": "^0.1.6", "ini": "^7.0.0", "kubernetes-types": "^1.30.0", "msgpackr": "^2.0.1", "multipasta": "^0.2.7", "toml": "^4.1.1", "uuid": "^14.0.0", "yaml": "^2.9.0" } }, "sha512-KrDuecxuN8rC7dytVs5GFfUhtC+/D8pOyfVb1LNZGjJY7qigQG9xXJ4R1Bp+tBo7sKbZOXBswCfuQ3ombaEldQ=="],
+    "effect": ["effect@4.0.0-beta.76", "", { "dependencies": { "@standard-schema/spec": "^1.1.0", "fast-check": "^4.8.0", "find-my-way-ts": "^0.1.6", "ini": "^7.0.0", "kubernetes-types": "^1.30.0", "msgpackr": "^2.0.1", "multipasta": "^0.2.7", "toml": "^4.1.1", "uuid": "^14.0.0", "yaml": "^2.9.0" } }, "sha512-hiX9cyJni4o7xn1rCYn5ASkLQOYePY23QxvHh5vM9K9cCNauNeXnwufvetXoUVISD/swzBYxGbHUC3rnjqUF+g=="],
 
     "electron-to-chromium": ["electron-to-chromium@1.5.356", "", {}, "sha512-9NgFd7m5t5MCJ5rUSjJITUXAH9mEGlrlofnMf4YEr+pz6JlP7cWmTAH+JFmbPnaSW8koVTkuW7pacORWAnA5Yw=="],
 

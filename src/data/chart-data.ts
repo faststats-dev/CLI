@@ -51,12 +51,16 @@ export type DashboardChart = ChartsListCharts200[number] & {
 export const mergeDashboardCharts = (
 	charts: ChartsListCharts200,
 	metrics: MetricsLoadDashboardData200,
-): ReadonlyArray<DashboardChart> =>
-	charts.map((chart) => ({
+): ReadonlyArray<DashboardChart> => {
+	const dataByChartId = metrics.charts as Readonly<
+		Record<string, ChartData | undefined>
+	>;
+	return charts.map((chart) => ({
 		...chart,
-		data: (metrics.charts[chart.id] as ChartData | undefined) ?? null,
+		data: dataByChartId[chart.id] ?? null,
 		flowMeta: metrics.flowMeta?.[chart.id] ?? null,
 	}));
+};
 
 export interface SeriesEntry {
 	readonly name: string;
@@ -110,7 +114,7 @@ function rowsToEntries(
 	if (valueKey == null) return [];
 	const entries: SeriesEntry[] = [];
 	for (const row of rows) {
-		const value = Number(row[valueKey]);
+		const value = Number(row[valueKey]) ?? 0;
 		if (Number.isFinite(value)) entries.push({ name: row.name, value });
 	}
 	return entries;
@@ -151,14 +155,6 @@ export function truncateLabel(label: string, maxLength: number): string {
 	if (label.length <= maxLength) return label;
 	if (maxLength <= 3) return label.slice(0, maxLength);
 	return `${label.slice(0, maxLength - 1)}…`;
-}
-
-export function resolveListTabIndex(
-	queryConfig: ChartQueryConfig | null | undefined,
-): number {
-	const saved = queryConfig?.visualOptions?.list?.selectedTabIndex ?? 0;
-	const index = Number(saved);
-	return Number.isFinite(index) && index >= 0 ? index : 0;
 }
 
 function formatNumber(value: number, format: "number" | "percent"): string {

@@ -6,7 +6,6 @@ import {
 import type { ChartFlowMetaLite } from "../data/chart-data.ts";
 import {
 	parseSeriesEntries,
-	resolveListTabIndex,
 	resolveMetricKey,
 	resolveSeriesRows,
 	truncateLabel,
@@ -41,7 +40,7 @@ export function BarChart(props: BarChartProps) {
 	const prepared = createMemo(() => {
 		const rows = resolveSeriesRows(
 			props.data,
-			resolveListTabIndex(props.queryConfig),
+			props.queryConfig?.visualOptions?.list?.selectedTabIndex ?? 0,
 		);
 		return prepareBarChartData(rows, props.queryConfig, props.flowMeta);
 	});
@@ -166,7 +165,8 @@ interface PieLegendItem {
 
 export function PieChart(props: PieChartProps) {
 	const entries = createMemo(() => {
-		const tabIndex = resolveListTabIndex(props.queryConfig);
+		const tabIndex =
+			props.queryConfig?.visualOptions?.list?.selectedTabIndex ?? 0;
 		const rows = resolveSeriesRows(props.data, tabIndex);
 		return parseSeriesEntries(rows, resolveMetricKey(props.queryConfig));
 	});
@@ -307,7 +307,8 @@ export interface LineAreaChartProps extends SeriesChartProps {
 
 export function LineAreaChart(props: LineAreaChartProps) {
 	const prepared = createMemo(() => {
-		const tabIndex = resolveListTabIndex(props.queryConfig);
+		const tabIndex =
+			props.queryConfig?.visualOptions?.list?.selectedTabIndex ?? 0;
 		const rows = resolveSeriesRows(props.data, tabIndex);
 		return prepareLineAreaChartData(rows, props.queryConfig, props.flowMeta);
 	});
