@@ -7,19 +7,25 @@ import {
 	resolveSeriesRows,
 	truncateLabel,
 } from "../data/chart-data.ts";
+import { formatEntryNames } from "../data/countries.ts";
 import { ChartEmptyState, type SeriesChartProps } from "./chart-shared.tsx";
 import { theme } from "./theme.ts";
 
 export function ListChart(props: SeriesChartProps) {
-	const entries = createMemo(() =>
-		parseSeriesEntries(
-			resolveSeriesRows(
-				props.data,
-				props.queryConfig?.visualOptions?.list?.selectedTabIndex ?? 0,
+	const entries = createMemo(() => {
+		const tabIndex =
+			props.queryConfig?.visualOptions?.list?.selectedTabIndex ?? 0;
+		return formatEntryNames(
+			parseSeriesEntries(
+				resolveSeriesRows(props.data, tabIndex),
+				resolveMetricKey(props.queryConfig),
 			),
-			resolveMetricKey(props.queryConfig),
-		),
-	);
+			props.flowMeta,
+			props.queryConfig,
+			props.chartName,
+			tabIndex,
+		);
+	});
 
 	let scrollBox: ScrollBoxRenderable | undefined;
 	const handleScroll = (event: MouseEvent) => {

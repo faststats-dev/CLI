@@ -8,7 +8,6 @@ import {
 	getChartColor,
 	resolveChartPalette,
 } from "./chart-color-palette.ts";
-
 export interface MapChartHighlight {
 	readonly country: string;
 	readonly color: string;

@@ -378,6 +378,12 @@ function ChartTile(props: {
 		get queryConfig() {
 			return props.chart.queryConfig ?? null;
 		},
+		get flowMeta() {
+			return props.chart.flowMeta;
+		},
+		get chartName() {
+			return props.chart.name;
+		},
 		get accent() {
 			return props.accent;
 		},
@@ -398,20 +404,14 @@ function ChartTile(props: {
 			body = <ListChart {...series} />;
 			break;
 		case "bar":
-			body = <BarChart {...series} flowMeta={props.chart.flowMeta} />;
+			body = <BarChart {...series} />;
 			break;
 		case "pie":
 			body = <PieChart {...series} />;
 			break;
 		case "line":
 		case "area":
-			body = (
-				<LineAreaChart
-					{...series}
-					chartType={props.chart.chartType}
-					flowMeta={props.chart.flowMeta}
-				/>
-			);
+			body = <LineAreaChart {...series} chartType={props.chart.chartType} />;
 			break;
 		case "map":
 			body = <MapChart {...series} />;

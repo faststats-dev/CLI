@@ -3,7 +3,6 @@ import {
 	getChartColor,
 	resolveChartPalette,
 } from "../data/chart-color-palette.ts";
-import type { ChartFlowMetaLite } from "../data/chart-data.ts";
 import {
 	parseSeriesEntries,
 	resolveMetricKey,
@@ -14,6 +13,7 @@ import {
 	prepareBarChartData,
 	prepareLineAreaChartData,
 } from "../data/chart-query-utils.ts";
+import { formatEntryNames } from "../data/countries.ts";
 import {
 	axisGutterWidth,
 	buildBoundsTicks,
@@ -33,16 +33,28 @@ import { theme } from "./theme.ts";
 
 export interface BarChartProps extends SeriesChartProps {
 	readonly preferredChartColors: ReadonlyArray<string> | null;
-	readonly flowMeta: ChartFlowMetaLite | null;
 }
 
 export function BarChart(props: BarChartProps) {
 	const prepared = createMemo(() => {
-		const rows = resolveSeriesRows(
-			props.data,
-			props.queryConfig?.visualOptions?.list?.selectedTabIndex ?? 0,
+		const tabIndex =
+			props.queryConfig?.visualOptions?.list?.selectedTabIndex ?? 0;
+		const rows = resolveSeriesRows(props.data, tabIndex);
+		const preparedData = prepareBarChartData(
+			rows,
+			props.queryConfig,
+			props.flowMeta,
 		);
-		return prepareBarChartData(rows, props.queryConfig, props.flowMeta);
+		return {
+			...preparedData,
+			entries: formatEntryNames(
+				preparedData.entries,
+				props.flowMeta,
+				props.queryConfig,
+				props.chartName,
+				tabIndex,
+			),
+		};
 	});
 	const maxValue = createMemo(() =>
 		prepared().entries.reduce((max, entry) => Math.max(max, entry.value), 0),
@@ -168,7 +180,13 @@ export function PieChart(props: PieChartProps) {
 		const tabIndex =
 			props.queryConfig?.visualOptions?.list?.selectedTabIndex ?? 0;
 		const rows = resolveSeriesRows(props.data, tabIndex);
-		return parseSeriesEntries(rows, resolveMetricKey(props.queryConfig));
+		return formatEntryNames(
+			parseSeriesEntries(rows, resolveMetricKey(props.queryConfig)),
+			props.flowMeta,
+			props.queryConfig,
+			props.chartName,
+			tabIndex,
+		);
 	});
 	const palette = createMemo(() =>
 		resolveChartPalette(
@@ -302,7 +320,6 @@ function PieLegend(props: {
 export interface LineAreaChartProps extends SeriesChartProps {
 	readonly chartType: "line" | "area";
 	readonly preferredChartColors: ReadonlyArray<string> | null;
-	readonly flowMeta: ChartFlowMetaLite | null;
 }
 
 export function LineAreaChart(props: LineAreaChartProps) {
