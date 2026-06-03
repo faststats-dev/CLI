@@ -51,16 +51,12 @@ export type DashboardChart = ChartsListCharts200[number] & {
 export const mergeDashboardCharts = (
 	charts: ChartsListCharts200,
 	metrics: MetricsLoadDashboardData200,
-): ReadonlyArray<DashboardChart> => {
-	const dataByChartId = metrics.charts as Readonly<
-		Record<string, ChartData | undefined>
-	>;
-	return charts.map((chart) => ({
+): ReadonlyArray<DashboardChart> =>
+	charts.map((chart) => ({
 		...chart,
-		data: dataByChartId[chart.id] ?? null,
+		data: (metrics.charts as Record<string, ChartData>)[chart.id] ?? null,
 		flowMeta: metrics.flowMeta?.[chart.id] ?? null,
 	}));
-};
 
 export interface SeriesEntry {
 	readonly name: string;

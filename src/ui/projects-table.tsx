@@ -23,9 +23,6 @@ const ROW_GAP = 1;
 const ROW_STRIDE = ROW_HEIGHT + ROW_GAP;
 const AVATAR_WIDTH = 3;
 
-const listContentHeight = (count: number) =>
-	count <= 0 ? 0 : count * ROW_HEIGHT + (count - 1) * ROW_GAP;
-
 const scoreProject = (project: Project, query: string): number => {
 	const name = project.name.toLowerCase();
 	const slug = project.slug.toLowerCase();
@@ -95,9 +92,6 @@ function ProjectsApp(props: ProjectsAppProps) {
 		filterProjects(props.options.projects, searchQuery()),
 	);
 	const list = useSelectableList(() => visibleProjects().length);
-	const listHeight = createMemo(() =>
-		listContentHeight(visibleProjects().length),
-	);
 
 	useKeyboard((key) => {
 		if (key.name === "backspace") {
@@ -178,7 +172,10 @@ function ProjectsApp(props: ProjectsAppProps) {
 				scrollX={false}
 				scrollY={true}
 				viewportCulling={true}
-				contentOptions={{ width: "100%", height: listHeight() }}
+				contentOptions={{
+					width: "100%",
+					height: "auto",
+				}}
 				verticalScrollbarOptions={{
 					trackOptions: {
 						backgroundColor: theme.surface,
@@ -235,8 +232,8 @@ function useSelectableList(itemCount: Accessor<number>) {
 		index,
 		goTo: (next: number) => setIndex(clamp(next)),
 		moveBy: (delta: number) => setIndex((current) => clamp(current + delta)),
-		bindScrollTarget: (element: ScrollBoxRenderable | null | undefined) => {
-			scrollTarget = element ?? undefined;
+		bindScrollTarget: (element: ScrollBoxRenderable | undefined) => {
+			scrollTarget = element;
 		},
 	};
 }

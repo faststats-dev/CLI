@@ -64,7 +64,7 @@ export function ListChart(props: SeriesChartProps) {
 				</Show>
 				<scrollbox
 					ref={(el) => {
-						scrollBox = el ?? undefined;
+						scrollBox = el;
 					}}
 					onMouseScroll={handleScroll}
 					flexGrow={1}
