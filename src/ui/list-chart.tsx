@@ -18,26 +18,6 @@ export function ListChart(props: SeriesChartProps) {
 			resolveMetricKey(props.queryConfig),
 		),
 	);
-	const showHeader = createMemo(() => props.innerHeight >= 3);
-	const viewportHeight = createMemo(() =>
-		Math.max(0, props.innerHeight - (showHeader() ? 1 : 0)),
-	);
-	const hasScrollbar = createMemo(() => entries().length > viewportHeight());
-	const contentWidth = createMemo(() =>
-		Math.max(1, props.innerWidth - (hasScrollbar() ? 1 : 0)),
-	);
-	const maxValue = createMemo(() => {
-		const items = entries();
-		if (items.length === 0) return 0;
-		return Math.max(...items.map((item) => item.value));
-	});
-	const valueWidth = createMemo(() => {
-		const widths = entries().map(
-			(entry) => formatWidgetValue(entry.value).length,
-		);
-		return Math.max(5, ...widths);
-	});
-	const metricLabel = () => resolveMetricKey(props.queryConfig) ?? "Value";
 
 	let scrollBox: ScrollBoxRenderable | undefined;
 	const handleScroll = (event: MouseEvent) => {
@@ -53,22 +33,30 @@ export function ListChart(props: SeriesChartProps) {
 			fallback={<ChartEmptyState message="No items" />}
 		>
 			<box flexDirection="column" width="100%" height="100%" minHeight={0}>
-				<Show when={showHeader()}>
+				<Show when={props.innerHeight >= 3}>
 					<box
 						flexDirection="row"
 						height={1}
-						width={contentWidth()}
+						width={props.innerWidth}
 						flexShrink={0}
 						backgroundColor={theme.muted}
 					>
 						<text fg={theme.textMuted} flexGrow={1} flexShrink={1}>
 							{truncateLabel(
 								"Name",
-								Math.max(8, contentWidth() - valueWidth() - 1),
+								Math.max(
+									8,
+									props.innerWidth -
+										formatWidgetValue(entries()[0]?.value).length -
+										1,
+								),
 							)}
 						</text>
 						<text fg={theme.textMuted} flexShrink={0}>
-							{truncateLabel(metricLabel(), valueWidth())}
+							{truncateLabel(
+								resolveMetricKey(props.queryConfig) ?? "Value",
+								formatWidgetValue(entries()[0]?.value).length,
+							)}
 						</text>
 					</box>
 				</Show>
@@ -100,9 +88,9 @@ export function ListChart(props: SeriesChartProps) {
 							<ListRow
 								name={entry.name}
 								value={entry.value}
-								maxValue={maxValue()}
-								innerWidth={contentWidth()}
-								valueWidth={valueWidth()}
+								maxValue={Math.max(...entries().map((entry) => entry.value))}
+								innerWidth={props.innerWidth}
+								valueWidth={formatWidgetValue(entry.value).length}
 							/>
 						)}
 					</For>
