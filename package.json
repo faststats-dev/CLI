@@ -25,12 +25,6 @@
 		"build": "bun run scripts/build.ts",
 		"check": "biome check .",
 		"typecheck": "tsc --noEmit",
-		"completions:fish": "./faststats --completions fish",
-		"completions:zsh": "./faststats --completions zsh",
-		"completions:bash": "./faststats --completions bash",
-		"install:completions": "bun run scripts/install-completions.ts fish",
-		"install:completions:zsh": "bun run scripts/install-completions.ts zsh",
-		"install:completions:bash": "bun run scripts/install-completions.ts bash",
 		"download-openapi": "curl -o openapi.json http://localhost:4000/openapi.json",
 		"generate": "openapigen --spec openapi.json --format httpclient --name Api > src/api.ts"
 	},
