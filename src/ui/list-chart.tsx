@@ -19,6 +19,13 @@ export function ListChart(props: SeriesChartProps) {
 		),
 	);
 	const showHeader = createMemo(() => props.innerHeight >= 3);
+	const viewportHeight = createMemo(() =>
+		Math.max(0, props.innerHeight - (showHeader() ? 1 : 0)),
+	);
+	const hasScrollbar = createMemo(() => entries().length > viewportHeight());
+	const contentWidth = createMemo(() =>
+		Math.max(1, props.innerWidth - (hasScrollbar() ? 1 : 0)),
+	);
 	const maxValue = createMemo(() => {
 		const items = entries();
 		if (items.length === 0) return 0;
@@ -50,14 +57,14 @@ export function ListChart(props: SeriesChartProps) {
 					<box
 						flexDirection="row"
 						height={1}
-						width="100%"
+						width={contentWidth()}
 						flexShrink={0}
 						backgroundColor={theme.muted}
 					>
 						<text fg={theme.textMuted} flexGrow={1} flexShrink={1}>
 							{truncateLabel(
 								"Name",
-								Math.max(8, props.innerWidth - valueWidth() - 1),
+								Math.max(8, contentWidth() - valueWidth() - 1),
 							)}
 						</text>
 						<text fg={theme.textMuted} flexShrink={0}>
@@ -94,7 +101,7 @@ export function ListChart(props: SeriesChartProps) {
 								name={entry.name}
 								value={entry.value}
 								maxValue={maxValue()}
-								innerWidth={props.innerWidth}
+								innerWidth={contentWidth()}
 								valueWidth={valueWidth()}
 							/>
 						)}
