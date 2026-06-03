@@ -374,20 +374,30 @@ function ChartTile(props: {
 	accent: string;
 	preferredChartColors: ReadonlyArray<string> | null;
 }) {
-	const left = props.pos.x * props.cellWidth;
-	const width = Math.max(2, props.pos.w * props.cellWidth - CELL_GAP);
-	const top = props.pos.y * props.rowHeight;
-	const height = Math.max(2, props.pos.h * props.rowHeight - CELL_GAP);
-	const innerWidth = Math.max(1, width - 4);
-	const innerHeight = Math.max(1, height - 2);
+	const left = () => props.pos.x * props.cellWidth;
+	const width = () => Math.max(2, props.pos.w * props.cellWidth - CELL_GAP);
+	const top = () => props.pos.y * props.rowHeight;
+	const height = () => Math.max(2, props.pos.h * props.rowHeight - CELL_GAP);
+	const innerWidth = () => Math.max(1, width() - 4);
+	const innerHeight = () => Math.max(1, height() - 2);
 	const series = {
-		data: props.chart.data,
-		queryConfig: props.chart.queryConfig,
-		accent: props.accent,
-		innerWidth,
-		innerHeight,
+		get data() {
+			return props.chart.data;
+		},
+		get queryConfig() {
+			return props.chart.queryConfig;
+		},
+		get accent() {
+			return props.accent;
+		},
+		get innerWidth() {
+			return innerWidth();
+		},
+		get innerHeight() {
+			return innerHeight();
+		},
 	};
-	const colors = props.preferredChartColors;
+	const colors = () => props.preferredChartColors;
 
 	let body: JSX.Element;
 	switch (props.chart.chartType) {
@@ -402,12 +412,12 @@ function ChartTile(props: {
 				<BarChart
 					{...series}
 					flowMeta={props.chart.flowMeta}
-					preferredChartColors={colors}
+					preferredChartColors={colors()}
 				/>
 			);
 			break;
 		case "pie":
-			body = <PieChart {...series} preferredChartColors={colors} />;
+			body = <PieChart {...series} preferredChartColors={colors()} />;
 			break;
 		case "line":
 		case "area":
@@ -416,19 +426,19 @@ function ChartTile(props: {
 					{...series}
 					chartType={props.chart.chartType}
 					flowMeta={props.chart.flowMeta}
-					preferredChartColors={colors}
+					preferredChartColors={colors()}
 				/>
 			);
 			break;
 		case "map":
-			body = <MapChart {...series} preferredChartColors={colors} />;
+			body = <MapChart {...series} preferredChartColors={colors()} />;
 			break;
 		case "heatmap":
 			body = (
 				<HeatmapChart
 					{...series}
 					flowMeta={props.chart.flowMeta}
-					preferredChartColors={colors}
+					preferredChartColors={colors()}
 					showLegend={
 						props.chart.queryConfig?.visualOptions?.heatmap?.showLegend ?? true
 					}
@@ -454,10 +464,10 @@ function ChartTile(props: {
 	return (
 		<box
 			position="absolute"
-			left={left}
-			top={top}
-			width={width}
-			height={height}
+			left={left()}
+			top={top()}
+			width={width()}
+			height={height()}
 			border={true}
 			borderStyle="single"
 			borderColor={props.accent}
