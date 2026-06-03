@@ -9,9 +9,7 @@ import { resolveSeriesRows, truncateLabel } from "../data/chart-data.ts";
 import {
 	buildHeatmapIntensityScale,
 	buildHeatmapMatrix,
-	formatHeatmapCategoryLabel,
 	formatHeatmapLabel,
-	formatHeatmapRowLabel,
 	getHeatmapCellColor,
 	getHeatmapMosaicColumnCount,
 	getHeatmapMosaicItems,
@@ -122,7 +120,6 @@ function HeatmapChartBody(props: {
 					innerWidth={props.innerWidth}
 					innerHeight={props.innerHeight}
 					displayMatrix={props.displayMatrix}
-					layout={props.layout}
 					intensityFills={props.intensityFills}
 					intensityScale={props.intensityScale}
 					showLegend={props.showLegend}
@@ -235,17 +232,16 @@ function HeatmapGridChart(props: {
 	readonly innerWidth: number;
 	readonly innerHeight: number;
 	readonly displayMatrix: HeatmapMatrix;
-	readonly layout: HeatmapLayout;
 	readonly intensityFills: readonly string[];
 	readonly intensityScale: HeatmapIntensityScale;
 	readonly showLegend: boolean;
 }) {
-	const labelColW = () => (props.layout === "calendar" ? 5 : 7);
+	const labelColW = 7;
 	const headerH = 1;
 	const legendH = () => (props.showLegend ? 1 : 0);
 	const hideRowLabels = () => props.displayMatrix.rowLabels.length <= 1;
 	const gridW = createMemo(() =>
-		Math.max(4, props.innerWidth - (hideRowLabels() ? 0 : labelColW() + 1)),
+		Math.max(4, props.innerWidth - (hideRowLabels() ? 0 : labelColW + 1)),
 	);
 	const gridBodyH = createMemo(() =>
 		Math.max(1, props.innerHeight - legendH() - headerH),
@@ -295,7 +291,7 @@ function HeatmapGridChart(props: {
 		>
 			<box flexDirection="row" height={headerH} flexShrink={0}>
 				<Show when={!hideRowLabels()}>
-					<box width={labelColW()} flexShrink={0} />
+					<box width={labelColW} flexShrink={0} />
 				</Show>
 				<box
 					flexDirection="row"
@@ -307,12 +303,7 @@ function HeatmapGridChart(props: {
 						{(colLabel, index) => (
 							<text fg={theme.textMuted} width={cellW()} flexShrink={0}>
 								{index() % colTickEvery() === 0
-									? truncateLabel(
-											props.layout === "calendar"
-												? formatHeatmapLabel(colLabel)
-												: formatHeatmapCategoryLabel(colLabel),
-											cellW(),
-										)
+									? truncateLabel(formatHeatmapLabel(colLabel), cellW())
 									: ""}
 							</text>
 						)}
@@ -329,12 +320,9 @@ function HeatmapGridChart(props: {
 					{(rowLabel, rowIndex) => (
 						<box flexDirection="row" height={1} flexShrink={0}>
 							<Show when={!hideRowLabels()}>
-								<text fg={theme.textMuted} width={labelColW()} flexShrink={0}>
+								<text fg={theme.textMuted} width={labelColW} flexShrink={0}>
 									<Show when={rowIndex() % rowTickEvery() === 0} fallback={" "}>
-										{truncateLabel(
-											formatHeatmapRowLabel(rowLabel),
-											labelColW(),
-										)}
+										{truncateLabel(rowLabel, labelColW)}
 									</Show>
 								</text>
 							</Show>
