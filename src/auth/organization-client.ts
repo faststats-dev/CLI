@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { apiUrl, loadAccessToken } from "../config.ts";
+import { AuthError, SESSION_EXPIRED_MESSAGE } from "../auth.ts";
 
 export interface OrganizationSummary {
 	readonly id: string;
@@ -35,6 +35,9 @@ const authRequest = <T>(
 			const payload = (await response.json().catch(() => ({}))) as T & {
 				message?: string;
 			};
+			if (response.status === 401) {
+				throw new AuthError({ message: SESSION_EXPIRED_MESSAGE });
+			}
 			if (!response.ok) {
 				throw new Error(
 					payload.message ??
@@ -46,16 +49,6 @@ const authRequest = <T>(
 		catch: (error) =>
 			error instanceof Error ? error : new Error("Organization request failed"),
 	});
-
-export const resolveAccessToken = Effect.gen(function* () {
-	const accessToken = yield* loadAccessToken;
-	if (!accessToken) {
-		return yield* Effect.fail(
-			new Error("Organization selection requires login. Run faststats login."),
-		);
-	}
-	return { accessToken, authBaseUrl: `${apiUrl}/auth` };
-});
 
 export const listOrganizations = (authBaseUrl: string, accessToken: string) =>
 	authRequest<ReadonlyArray<OrganizationSummary>>(

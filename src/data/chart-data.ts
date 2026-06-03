@@ -43,6 +43,21 @@ export type ChartQueryConfig = NonNullable<
 	ChartsListCharts200[number]["queryConfig"]
 >;
 
+export type DashboardChart = ChartsListCharts200[number] & {
+	readonly data: ChartData | null;
+	readonly flowMeta: ChartFlowMetaLite | null;
+};
+
+export const mergeDashboardCharts = (
+	charts: ChartsListCharts200,
+	metrics: MetricsLoadDashboardData200,
+): ReadonlyArray<DashboardChart> =>
+	charts.map((chart) => ({
+		...chart,
+		data: (metrics.charts[chart.id] as ChartData | undefined) ?? null,
+		flowMeta: metrics.flowMeta?.[chart.id] ?? null,
+	}));
+
 export interface SeriesEntry {
 	readonly name: string;
 	readonly value: number;

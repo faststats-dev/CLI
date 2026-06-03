@@ -6,10 +6,10 @@ import {
 	listCreatableOrganizations,
 	listOrganizations,
 	type OrganizationSummary,
-	resolveAccessToken,
 	resolveOrganizationByRef,
 	setActiveOrganization,
 } from "../../auth/organization-client.ts";
+import { authContext } from "../../auth.ts";
 import {
 	formatApiErrorMessage,
 	promptIfAbsent,
@@ -64,7 +64,7 @@ const resolveOrganizationContext = (orgFlag: Option.Option<string>) =>
 	Effect.gen(function* () {
 		const orgRef = Option.getOrUndefined(orgFlag);
 		if (orgRef !== undefined) {
-			const { accessToken, authBaseUrl } = yield* resolveAccessToken;
+			const { accessToken, authBaseUrl } = yield* authContext;
 			const organizations = yield* listOrganizations(authBaseUrl, accessToken);
 			const target = resolveOrganizationByRef(organizations, orgRef);
 			if (!target) {
@@ -92,7 +92,7 @@ const resolveOrganizationContext = (orgFlag: Option.Option<string>) =>
 			return;
 		}
 
-		const access = yield* Effect.option(resolveAccessToken);
+		const access = yield* Effect.option(authContext);
 		if (Option.isNone(access)) {
 			return;
 		}

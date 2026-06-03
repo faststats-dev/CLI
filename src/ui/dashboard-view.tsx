@@ -9,8 +9,8 @@ import {
 	onCleanup,
 	Show,
 } from "solid-js";
-import type { ChartsListCharts200, DashboardRecord } from "../api.ts";
-import type { ChartData, ChartFlowMetaLite } from "../data/chart-data.ts";
+import type { DashboardsListDashboards200 } from "../api.ts";
+import type { DashboardChart } from "../data/chart-data.ts";
 import type { Project } from "../data/project.ts";
 import { Divider } from "./divider.tsx";
 import { HeatmapChart } from "./heatmap-chart.tsx";
@@ -49,14 +49,9 @@ const CHART_GLYPH: Record<string, string> = {
 	radar: "◈",
 };
 
-export type DashboardChart = ChartsListCharts200[number] & {
-	readonly data: ChartData | null;
-	readonly flowMeta: ChartFlowMetaLite | null;
-};
-
 export interface RunDashboardViewOptions {
 	readonly project: Project;
-	readonly dashboards: ReadonlyArray<DashboardRecord>;
+	readonly dashboards: ReadonlyArray<DashboardsListDashboards200[number]>;
 	readonly loadDashboard: (
 		dashboardId: string,
 	) => Promise<ReadonlyArray<DashboardChart>>;
@@ -385,7 +380,7 @@ function ChartTile(props: {
 			return props.chart.data;
 		},
 		get queryConfig() {
-			return props.chart.queryConfig;
+			return props.chart.queryConfig ?? null;
 		},
 		get accent() {
 			return props.accent;

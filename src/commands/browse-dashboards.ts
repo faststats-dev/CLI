@@ -1,12 +1,9 @@
 import { Console, Effect } from "effect";
-import type { DashboardRecord } from "../api.ts";
+import type { DashboardsListDashboards200 } from "../api.ts";
 import { FastStatsApi } from "../api-client.ts";
-import type { ChartData } from "../data/chart-data.ts";
+import { mergeDashboardCharts } from "../data/chart-data.ts";
 import type { Project } from "../data/project.ts";
-import {
-	type DashboardChart,
-	runDashboardView,
-} from "../ui/dashboard-view.tsx";
+import { runDashboardView } from "../ui/dashboard-view.tsx";
 import { runProjectsTable } from "../ui/projects-table.tsx";
 
 const DEFAULT_TIME_RANGE_MS = 7 * 24 * 60 * 60 * 1000;
@@ -14,7 +11,9 @@ const DEFAULT_TIME_RANGE_MS = 7 * 24 * 60 * 60 * 1000;
 export interface BrowseDashboardsOptions {
 	readonly title: string;
 	readonly projects: ReadonlyArray<Project>;
-	readonly dashboardFilter?: (dashboard: DashboardRecord) => boolean;
+	readonly dashboardFilter?: (
+		dashboard: DashboardsListDashboards200[number],
+	) => boolean;
 }
 
 export const browseDashboards = Effect.fnUntraced(function* (
@@ -29,7 +28,6 @@ export const browseDashboards = Effect.fnUntraced(function* (
 				projects: options.projects,
 			}),
 		);
-
 		if (result.kind !== "selected") break;
 
 		const project = result.project;
@@ -48,25 +46,18 @@ export const browseDashboards = Effect.fnUntraced(function* (
 				const charts = yield* api.ChartsListCharts(project.id, {
 					params: { dashboardId },
 				});
-				if (charts.length === 0) return [] as const;
-
-				const dashboardData = yield* api.MetricsLoadDashboardData({
-					payload: {
-						projectId: project.id,
-						dashboardId,
-						timeRange: {
-							type: "relative",
-							maxAgeMs: DEFAULT_TIME_RANGE_MS,
+				if (!charts.length) return [] as const;
+				return mergeDashboardCharts(
+					charts,
+					yield* api.MetricsLoadDashboardData({
+						payload: {
+							projectId: project.id,
+							dashboardId,
+							timeRange: {
+								type: "relative",
+								maxAgeMs: DEFAULT_TIME_RANGE_MS,
+							},
 						},
-					},
-				});
-
-				const chartDataById = dashboardData.charts as Record<string, ChartData>;
-				return charts.map(
-					(chart): DashboardChart => ({
-						...chart,
-						data: chartDataById[chart.id] ?? null,
-						flowMeta: dashboardData.flowMeta?.[chart.id] ?? null,
 					}),
 				);
 			}).pipe(Effect.runPromise);

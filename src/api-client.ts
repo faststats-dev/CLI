@@ -1,20 +1,12 @@
-import { Data, Effect } from "effect";
+import { Effect } from "effect";
 import * as HttpClient from "effect/unstable/http/HttpClient";
 import * as HttpClientRequest from "effect/unstable/http/HttpClientRequest";
 import * as Api from "./api.ts";
-import { apiUrl, loadAccessToken } from "./config.ts";
-
-class NotAuthenticatedError extends Data.TaggedError("NotAuthenticatedError")<{
-	readonly message: string;
-}> {}
+import { requireAccessToken } from "./auth.ts";
+import { apiUrl } from "./config.ts";
 
 export const FastStatsApi = Effect.gen(function* () {
-	const accessToken = yield* loadAccessToken;
-	if (!accessToken) {
-		return yield* new NotAuthenticatedError({
-			message: "Not authenticated. Run `faststats login`.",
-		});
-	}
+	const accessToken = yield* requireAccessToken;
 
 	const httpClient = yield* HttpClient.HttpClient;
 	const configured = httpClient.pipe(
