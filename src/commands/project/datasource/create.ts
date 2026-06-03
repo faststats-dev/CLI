@@ -1,13 +1,13 @@
 import { Effect, Option } from "effect";
 import { Argument, Command, Flag, Prompt } from "effect/unstable/cli";
 import { FastStatsApi } from "../../../api-client.ts";
-import { promptIfAbsent } from "../../../command-helpers.ts";
+import { promptIfAbsent, withApiError } from "../../../command-helpers.ts";
 import {
 	DataSourceNameSchema,
 	ReferenceIdSchema,
 } from "../../../datasource-validation.ts";
 import { validateWithSchema } from "../../../validation.ts";
-import { logDataSource, unwrapFlags, withDataSourceError } from "./shared.ts";
+import { logDataSource, unwrapFlags } from "./shared.ts";
 
 export const datasourceCreateCommand = Command.make(
 	"create",
@@ -161,7 +161,7 @@ export const datasourceCreateCommand = Command.make(
 				: Option.getOrUndefined(allowFloatFlag);
 
 		const api = yield* FastStatsApi;
-		const dataSource = yield* withDataSourceError(
+		const dataSource = yield* withApiError(
 			api.DataSourcesCreateDataSource(slug, {
 				payload: {
 					name,
@@ -174,6 +174,7 @@ export const datasourceCreateCommand = Command.make(
 					...unwrapFlags({ regex, minValue, maxValue }),
 				},
 			}),
+			"Data source request failed",
 		);
 
 		yield* logDataSource("Created", dataSource);

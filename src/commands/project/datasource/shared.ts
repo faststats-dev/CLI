@@ -1,10 +1,6 @@
 import { Console, Effect, Option, Record } from "effect";
 import { Prompt } from "effect/unstable/cli";
 import type { DataSourceRecord } from "../../../api.ts";
-import { withApiError } from "../../../command-helpers.ts";
-
-export const withDataSourceError = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
-	withApiError(effect, "Data source request failed");
 
 export const resolveDataSourceTarget = (
 	dataSources: ReadonlyArray<DataSourceRecord>,

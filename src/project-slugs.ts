@@ -9,11 +9,6 @@ const CACHE_DIR = join(homedir(), ".cache", "faststats");
 const CACHE_PATH = join(CACHE_DIR, "slugs.json");
 const COMPLETION_FETCH_TIMEOUT = "2 seconds";
 
-interface SlugCache {
-	readonly updatedAt: number;
-	readonly slugs: ReadonlyArray<string>;
-}
-
 export const isWebProject = (
 	project: ProjectsGetProject200,
 ): project is Extract<ProjectsGetProject200, { allowedHostnames: unknown }> =>
@@ -27,10 +22,7 @@ const fetchSlugs = Effect.gen(function* () {
 
 const readCache = Effect.gen(function* () {
 	const fs = yield* FileSystem.FileSystem;
-	return yield* fs.readFileString(CACHE_PATH).pipe(
-		Effect.map((content) => JSON.parse(content) as SlugCache),
-		Effect.option,
-	);
+	return yield* fs.readFileString(CACHE_PATH).pipe(Effect.map(JSON.parse));
 });
 
 export const writeSlugCache = (slugs: ReadonlyArray<string>) =>
@@ -43,7 +35,7 @@ export const writeSlugCache = (slugs: ReadonlyArray<string>) =>
 				Effect.andThen(
 					fs.writeFileString(
 						CACHE_PATH,
-						JSON.stringify({ updatedAt: now, slugs } satisfies SlugCache),
+						JSON.stringify({ updatedAt: now, slugs }),
 					),
 				),
 				Effect.ignore,
@@ -53,19 +45,11 @@ export const writeSlugCache = (slugs: ReadonlyArray<string>) =>
 export const loadSlugsForCompletion = Effect.gen(function* () {
 	const cached = yield* readCache;
 	if (Option.isSome(cached)) {
-		return cached.value.slugs;
+		return cached;
 	}
 
-	const fetched = yield* fetchSlugs.pipe(
+	return yield* fetchSlugs.pipe(
 		Effect.timeoutOption(COMPLETION_FETCH_TIMEOUT),
 		Effect.option,
-		Effect.map(Option.flatten),
 	);
-
-	if (Option.isSome(fetched)) {
-		yield* writeSlugCache(fetched.value);
-		return fetched.value;
-	}
-
-	return [] as ReadonlyArray<string>;
 });

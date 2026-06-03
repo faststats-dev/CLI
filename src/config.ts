@@ -11,35 +11,22 @@ const ACCESS_TOKEN = "access-token";
 const DEFAULT_API_URL = "https://api.faststats.dev";
 const DEFAULT_APP_URL = "https://faststats.dev";
 
-const normalize = (url: string) => url.replace(/\/$/, "");
-
-export const apiUrl = normalize(
-	process.env.FASTSTATS_API_URL ?? DEFAULT_API_URL,
-);
-export const appUrl = normalize(
-	process.env.FASTSTATS_APP_URL ?? DEFAULT_APP_URL,
-);
-
-const secretError = (action: string) => (error: unknown) =>
-	new SecretError({
-		message: `Failed to ${action} access token: ${
-			error instanceof Error ? error.message : String(error)
-		}`,
-	});
+export const apiUrl = process.env.FASTSTATS_API_URL ?? DEFAULT_API_URL;
+export const appUrl = process.env.FASTSTATS_APP_URL ?? DEFAULT_APP_URL;
 
 export const loadAccessToken = Effect.tryPromise({
 	try: () => secrets.get({ service: SERVICE, name: ACCESS_TOKEN }),
-	catch: secretError("read"),
+	catch: () => new SecretError({ message: "Failed to read access token" }),
 }).pipe(Effect.map((value) => value ?? undefined));
 
 export const saveAccessToken = (accessToken: string) =>
 	Effect.tryPromise({
 		try: () =>
 			secrets.set({ service: SERVICE, name: ACCESS_TOKEN, value: accessToken }),
-		catch: secretError("store"),
+		catch: () => new SecretError({ message: "Failed to store access token" }),
 	});
 
 export const clearAccessToken = Effect.tryPromise({
 	try: () => secrets.delete({ service: SERVICE, name: ACCESS_TOKEN }),
-	catch: secretError("delete"),
+	catch: () => new SecretError({ message: "Failed to delete access token" }),
 }).pipe(Effect.ignore);
