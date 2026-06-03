@@ -6,7 +6,22 @@
 	"bin": {
 		"faststats": "./src/index.ts"
 	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/faststats-dev/CLI.git"
+	},
+	"publishConfig": {
+		"access": "public",
+		"provenance": true
+	},
+	"files": [
+		"src",
+		"faststats"
+	],
 	"scripts": {
+		"changeset": "changeset",
+		"version-packages": "changeset version",
+		"release": "bun run build && changeset publish",
 		"build": "bun run scripts/build.ts",
 		"check": "biome check .",
 		"typecheck": "tsc --noEmit",
@@ -21,6 +36,7 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.4.16",
+		"@changesets/cli": "^2.31.0",
 		"@effect/openapi-generator": "^4.0.0-beta.76",
 		"@types/bun": "latest",
 		"@types/geojson": "^7946.0.16",

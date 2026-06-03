@@ -1,5 +1,8 @@
 # @faststats/cli
 
+> [!WARNING]
+> This CLI is **very experimental**. Commands, flags, and behavior may change or break without notice.
+
 The official FastStats CLI, built with Effect and OpenTUI.
 
 ## Install
