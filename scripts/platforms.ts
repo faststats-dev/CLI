@@ -54,15 +54,15 @@ export const PLATFORMS: Platform[] = [
 		binaryName: "faststats.exe",
 		distFile: "faststats-win32-x64.exe",
 	},
-	{
-		target: "bun-windows-arm64",
-		npmSuffix: "win32-arm64",
-		packageName: "@faststats/cli-win32-arm64",
-		os: ["win32"],
-		cpu: ["arm64"],
-		binaryName: "faststats.exe",
-		distFile: "faststats-win32-arm64.exe",
-	},
+	// {
+	// 	target: "bun-windows-arm64",
+	// 	npmSuffix: "win32-arm64",
+	// 	packageName: "@faststats/cli-win32-arm64",
+	// 	os: ["win32"],
+	// 	cpu: ["arm64"],
+	// 	binaryName: "faststats.exe",
+	// 	distFile: "faststats-win32-arm64.exe",
+	// },
 ];
 
 export function platformBinImportPath(platform: Platform): string {

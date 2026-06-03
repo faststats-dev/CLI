@@ -7,7 +7,7 @@ const { spawnSync } = require("node:child_process");
 const PLATFORMS = {
 	win32: {
 		x64: "@faststats/cli-win32-x64/faststats.exe",
-		arm64: "@faststats/cli-win32-arm64/faststats.exe",
+		// arm64: "@faststats/cli-win32-arm64/faststats.exe",
 	},
 	darwin: {
 		x64: "@faststats/cli-darwin-x64/faststats",
