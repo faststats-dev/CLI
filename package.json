@@ -1,30 +1,37 @@
 {
 	"name": "@faststats/cli",
-	"version": "0.0.0",
+	"version": "0.0.1",
 	"module": "src/index.ts",
 	"type": "module",
 	"bin": {
-		"faststats": "./src/index.ts"
+		"faststats": "./bin/faststats.cjs"
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/faststats-dev/CLI.git"
+		"url": "git+https://github.com/faststats-dev/CLI.git"
 	},
 	"publishConfig": {
-		"access": "public",
-		"provenance": true
+		"access": "public"
 	},
 	"files": [
-		"src",
-		"faststats"
+		"bin/faststats.cjs",
+		"README.md",
+		"CHANGELOG.md"
 	],
 	"scripts": {
 		"changeset": "changeset",
 		"version-packages": "changeset version",
-		"release": "bun run build && changeset publish",
+		"release": "bun run build:all && bun run scripts/publish.ts",
 		"build": "bun run scripts/build.ts",
+		"build:all": "bun run scripts/build-all.ts",
 		"check": "biome check .",
 		"typecheck": "tsc --noEmit",
+		"completions:fish": "./faststats --completions fish",
+		"completions:zsh": "./faststats --completions zsh",
+		"completions:bash": "./faststats --completions bash",
+		"install:completions": "bun run scripts/install-completions.ts fish",
+		"install:completions:zsh": "bun run scripts/install-completions.ts zsh",
+		"install:completions:bash": "bun run scripts/install-completions.ts bash",
 		"download-openapi": "curl -o openapi.json http://localhost:4000/openapi.json",
 		"generate": "openapigen --spec openapi.json --format httpclient --name Api > src/api.ts"
 	},
@@ -32,23 +39,27 @@
 		"@biomejs/biome": "2.4.16",
 		"@changesets/cli": "^2.31.0",
 		"@effect/openapi-generator": "^4.0.0-beta.76",
+		"@effect/platform-bun": "^4.0.0-beta.76",
+		"@opentui/core": "^0.3.1",
+		"@opentui/core-darwin-arm64": "0.3.1",
+		"@opentui/core-darwin-x64": "0.3.1",
+		"@opentui/core-linux-arm64": "0.3.1",
+		"@opentui/core-linux-x64": "0.3.1",
+		"@opentui/core-win32-arm64": "0.3.1",
+		"@opentui/core-win32-x64": "0.3.1",
+		"@opentui/solid": "^0.3.1",
 		"@types/bun": "latest",
 		"@types/geojson": "^7946.0.16",
 		"@types/topojson-client": "^3.1.5",
 		"@types/topojson-specification": "^1.0.5",
-		"knip": "^6.15.0",
-		"pkg-pr-new": "^0.0.75"
-	},
-	"peerDependencies": {
-		"typescript": "^5 || ^6.0.0"
-	},
-	"dependencies": {
-		"@effect/platform-bun": "^4.0.0-beta.76",
-		"@opentui/core": "^0.3.1",
-		"@opentui/solid": "^0.3.1",
 		"effect": "^4.0.0-beta.76",
+		"knip": "^6.15.0",
+		"pkg-pr-new": "^0.0.75",
 		"solid-js": "^1.9.13",
 		"topojson-client": "^3.1.0",
 		"world-atlas": "^2.0.2"
+	},
+	"peerDependencies": {
+		"typescript": "^5 || ^6.0.0"
 	}
 }

@@ -22,13 +22,13 @@ jobs:
           bun-version: latest
 
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: bun install --frozen-lockfile --cpu='*' --os='*'
 
       - name: Typecheck
         run: bun run typecheck
 
-      - name: Build
-        run: bun run build
+      - name: Build all platforms
+        run: bun run build:all
 
       - name: Publish preview release
-        run: bun run pkg-pr-new publish --bin --bun --commentWithSha
+        run: bun run pkg-pr-new publish --commentWithSha
