@@ -9,7 +9,7 @@ import {
 } from "../data/chart-data.ts";
 import { formatEntryNames } from "../data/countries.ts";
 import { ChartEmptyState, type SeriesChartProps } from "./chart-shared.tsx";
-import { theme } from "./theme.ts";
+import { theme } from "./utils/theme.ts";
 
 export function ListChart(props: SeriesChartProps) {
 	const entries = createMemo(() => {

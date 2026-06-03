@@ -1,5 +1,5 @@
 import { For } from "solid-js";
-import { theme } from "./theme.ts";
+import { theme } from "./utils/theme.ts";
 
 export function formatAxisValue(value: number): string {
 	if (!Number.isFinite(value)) return "";

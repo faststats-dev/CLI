@@ -1,4 +1,4 @@
-import { theme } from "./theme.ts";
+import { theme } from "./utils/theme.ts";
 
 export function Divider(props?: {
 	color?: string;

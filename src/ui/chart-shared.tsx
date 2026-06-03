@@ -6,7 +6,7 @@ import type {
 	ChartFlowMetaLite,
 	ChartQueryConfig,
 } from "../data/chart-data.ts";
-import { theme } from "./theme.ts";
+import { theme } from "./utils/theme.ts";
 
 export interface SeriesChartProps {
 	readonly data: ChartData | null;

@@ -1,6 +1,6 @@
-import { getChartColor } from "../data/chart-color-palette.ts";
-import type { SeriesEntry } from "../data/chart-data.ts";
-import { bucketSeriesEntries } from "../data/chart-data.ts";
+import { getChartColor } from "../../data/chart-color-palette.ts";
+import type { SeriesEntry } from "../../data/chart-data.ts";
+import { bucketSeriesEntries } from "../../data/chart-data.ts";
 import { theme } from "./theme.ts";
 
 interface ChartLineSegment {

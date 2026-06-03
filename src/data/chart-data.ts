@@ -2,7 +2,7 @@ import type {
 	ChartsListCharts200,
 	MetricsLoadDashboardData200,
 } from "../api.ts";
-import { theme } from "../ui/theme.ts";
+import { theme } from "../ui/utils/theme.ts";
 import {
 	blendHexOnBackground,
 	getChartColor,

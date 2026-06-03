@@ -7,7 +7,7 @@ import {
 	formatWidgetValue,
 	resolveWidgetMetric,
 } from "../data/chart-data.ts";
-import { theme } from "./theme.ts";
+import { theme } from "./utils/theme.ts";
 
 export interface WidgetChartProps {
 	readonly data: ChartData | null;

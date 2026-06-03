@@ -3,7 +3,7 @@ import {
 	drawLineAreaChart,
 	type LineAreaChartSeriesStyle,
 	resolveLineAreaChartPalette,
-} from "./line-area-chart-renderer.ts";
+} from "./utils/line-area-chart-renderer.ts";
 
 export interface LineAreaChartViewProps {
 	readonly series: ReadonlyArray<LineAreaChartSeriesStyle>;

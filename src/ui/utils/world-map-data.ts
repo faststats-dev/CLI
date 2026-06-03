@@ -7,18 +7,9 @@ import worldTopology from "world-atlas/countries-110m.json" with {
 import {
 	ISO_ALPHA2_TO_NUMERIC,
 	ISO_ALPHA3_TO_NUMERIC,
-} from "../data/iso-alpha2-numeric.ts";
+} from "../../data/iso-alpha2-numeric.ts";
 
-interface CountryProperties {
-	name?: string;
-}
-
-const topology = worldTopology as unknown as Topology;
-const countriesObject = topology.objects.countries as GeometryCollection;
-const featureCollection = feature(
-	topology,
-	countriesObject,
-) as FeatureCollection<Polygon | MultiPolygon, CountryProperties>;
+type Coord = readonly [number, number];
 
 interface CountryFeature {
 	readonly id: string;
@@ -26,52 +17,42 @@ interface CountryFeature {
 	readonly geometry: Polygon | MultiPolygon;
 }
 
-/** Numeric ISO 3166-1 codes we skip when rasterizing the base map. */
-const EXCLUDED_IDS = new Set<string>([
-	"010", // Antarctica
-]);
+const topology = worldTopology as unknown as Topology;
+const countriesObject = topology.objects.countries as GeometryCollection;
+const featureCollection = feature(
+	topology,
+	countriesObject,
+) as FeatureCollection<Polygon | MultiPolygon, { name?: string }>;
 
-/** Latitude window used by the equirectangular projection. */
+const EXCLUDED_IDS = new Set(["010"]);
+
 const PROJECTION_LAT_MAX = 85;
 const PROJECTION_LAT_MIN = -58;
 const PROJECTION_LAT_RANGE = PROJECTION_LAT_MAX - PROJECTION_LAT_MIN;
 
-const COUNTRIES: ReadonlyArray<CountryFeature> = featureCollection.features
-	.map((f, index) => ({
-		id: String(f.id ?? index),
-		name: f.properties?.name ?? "",
-		geometry: f.geometry,
-	}))
-	.filter((c) => !EXCLUDED_IDS.has(c.id));
-
 const COUNTRY_INDEX_BY_ID = new Map<string, number>();
 const COUNTRY_INDEX_BY_NAME = new Map<string, number>();
-for (const [i, c] of COUNTRIES.entries()) {
-	COUNTRY_INDEX_BY_ID.set(c.id, i);
-	if (c.name) {
-		COUNTRY_INDEX_BY_NAME.set(c.name.toLowerCase(), i);
-	}
+const COUNTRIES: CountryFeature[] = [];
+
+for (const [index, f] of featureCollection.features.entries()) {
+	const id = String(f.id ?? index);
+	if (EXCLUDED_IDS.has(id)) continue;
+	const name = f.properties?.name ?? "";
+	const i = COUNTRIES.length;
+	COUNTRIES.push({ id, name, geometry: f.geometry });
+	COUNTRY_INDEX_BY_ID.set(id, i);
+	if (name) COUNTRY_INDEX_BY_NAME.set(name.toLowerCase(), i);
 }
 
-function resolveNumericCountryId(idOrName: string): string | null {
-	const trimmed = idOrName.trim();
+function resolveNumericCountryId(input: string): string | null {
+	const trimmed = input.trim();
 	if (!trimmed) return null;
-
-	const byId = COUNTRY_INDEX_BY_ID.get(trimmed);
-	if (byId !== undefined) return trimmed;
-
+	if (COUNTRY_INDEX_BY_ID.has(trimmed)) return trimmed;
 	const padded = trimmed.padStart(3, "0");
-	if (padded !== trimmed && COUNTRY_INDEX_BY_ID.has(padded)) {
-		return padded;
-	}
-
+	if (padded !== trimmed && COUNTRY_INDEX_BY_ID.has(padded)) return padded;
 	const upper = trimmed.toUpperCase();
-	if (upper.length === 2) {
-		return ISO_ALPHA2_TO_NUMERIC[upper] ?? null;
-	}
-	if (upper.length === 3 && /^[A-Z]{3}$/.test(upper)) {
-		return ISO_ALPHA3_TO_NUMERIC[upper] ?? null;
-	}
+	if (upper.length === 2) return ISO_ALPHA2_TO_NUMERIC[upper] ?? null;
+	if (upper.length === 3) return ISO_ALPHA3_TO_NUMERIC[upper] ?? null;
 	return null;
 }
 
@@ -79,22 +60,14 @@ export function findCountryIndex(
 	idOrName: string | undefined | null,
 ): number | null {
 	if (!idOrName) return null;
-
 	const numericId = resolveNumericCountryId(idOrName);
-	if (numericId != null) {
-		const byId = COUNTRY_INDEX_BY_ID.get(numericId);
-		if (byId !== undefined) return byId;
-	}
-
-	const byName = COUNTRY_INDEX_BY_NAME.get(idOrName.trim().toLowerCase());
-	if (byName !== undefined) return byName;
-	return null;
+	if (numericId) return COUNTRY_INDEX_BY_ID.get(numericId) ?? null;
+	return COUNTRY_INDEX_BY_NAME.get(idOrName.trim().toLowerCase()) ?? null;
 }
 
 export interface RasterizedMap {
 	readonly width: number;
 	readonly height: number;
-	/** 0 = ocean, otherwise (country index + 1) in {@link COUNTRIES}. */
 	readonly pixels: Int32Array;
 }
 
@@ -114,7 +87,6 @@ export function rasterizeWorld(width: number, height: number): RasterizedMap {
 	}
 
 	const pixels = new Int32Array(width * height);
-
 	for (let i = 0; i < COUNTRIES.length; i++) {
 		const country = COUNTRIES[i];
 		if (!country) continue;
@@ -137,21 +109,12 @@ function rasterizeGeometry(
 	id: number,
 	pixels: Int32Array,
 ): void {
-	if (geometry.type === "Polygon") {
-		rasterizePolygon(geometry.coordinates, width, height, id, pixels);
-		return;
-	}
-	for (const polygon of geometry.coordinates) {
+	const polygons =
+		geometry.type === "Polygon" ? [geometry.coordinates] : geometry.coordinates;
+	for (const polygon of polygons) {
 		rasterizePolygon(polygon, width, height, id, pixels);
 	}
 }
-
-interface ProjectedPoint {
-	readonly x: number;
-	readonly y: number;
-}
-
-type LonLat = readonly [number, number];
 
 function rasterizePolygon(
 	rings: ReadonlyArray<ReadonlyArray<ReadonlyArray<number>>>,
@@ -160,23 +123,19 @@ function rasterizePolygon(
 	id: number,
 	pixels: Int32Array,
 ): void {
-	const splitRings: LonLat[][] = [];
+	const projected: Coord[][] = [];
 	for (const ring of rings) {
 		for (const sub of splitRingAtAntimeridian(ring)) {
-			splitRings.push(sub);
+			projected.push(sub.map(([lon, lat]) => project(lon, lat, width, height)));
 		}
 	}
-
-	const projected: ProjectedPoint[][] = splitRings.map((ring) =>
-		ring.map(([lon, lat]) => projectLonLat(lon, lat, width, height)),
-	);
 
 	let minY = Infinity;
 	let maxY = -Infinity;
 	for (const ring of projected) {
-		for (const p of ring) {
-			if (p.y < minY) minY = p.y;
-			if (p.y > maxY) maxY = p.y;
+		for (const [, y] of ring) {
+			if (y < minY) minY = y;
+			if (y > maxY) maxY = y;
 		}
 	}
 
@@ -193,12 +152,12 @@ function rasterizePolygon(
 				const p1 = ring[i];
 				const p2 = ring[(i + 1) % len];
 				if (!p1 || !p2) continue;
-				if (Math.abs(p2.x - p1.x) > antimeridianThreshold) continue;
-				const y1 = p1.y;
-				const y2 = p2.y;
+				const [x1, y1] = p1;
+				const [x2, y2] = p2;
+				if (Math.abs(x2 - x1) > antimeridianThreshold) continue;
 				if ((y1 <= yMid && y2 > yMid) || (y2 <= yMid && y1 > yMid)) {
 					const t = (yMid - y1) / (y2 - y1);
-					intersections.push(p1.x + t * (p2.x - p1.x));
+					intersections.push(x1 + t * (x2 - x1));
 				}
 			}
 		}
@@ -219,15 +178,9 @@ function rasterizePolygon(
 	}
 }
 
-/**
- * Split a polygon ring at the antimeridian (lon = ±180). Each resulting
- * sub-ring lies on a single side of the dateline and can be closed via a
- * vertical edge along its boundary, which means a simple scanline fill works
- * without producing spurious horizontal artifacts.
- */
 function splitRingAtAntimeridian(
 	ring: ReadonlyArray<ReadonlyArray<number>>,
-): LonLat[][] {
+): Coord[][] {
 	const len = ring.length;
 	if (len === 0) return [];
 
@@ -236,6 +189,7 @@ function splitRingAtAntimeridian(
 		readonly latAtCrossing: number;
 		readonly goingEast: boolean;
 	};
+
 	const crossings: Crossing[] = [];
 	for (let i = 0; i < len; i++) {
 		const p1 = ring[i];
@@ -252,19 +206,20 @@ function splitRingAtAntimeridian(
 		const targetLon = goingEast ? 180 : -180;
 		const denom = effectiveLon2 - lon1;
 		const t = denom === 0 ? 0 : (targetLon - lon1) / denom;
-		const latAtCrossing = lat1 + t * (lat2 - lat1);
-		crossings.push({ edgeIdx: i, latAtCrossing, goingEast });
+		crossings.push({
+			edgeIdx: i,
+			latAtCrossing: lat1 + t * (lat2 - lat1),
+			goingEast,
+		});
 	}
 
 	if (crossings.length === 0) {
-		const out: LonLat[] = [];
-		for (const p of ring) out.push([p[0] ?? 0, p[1] ?? 0]);
-		return [out];
+		return [ring.map((p) => [p[0] ?? 0, p[1] ?? 0] as Coord)];
 	}
 
 	const sorted = [...crossings].sort((a, b) => a.edgeIdx - b.edgeIdx);
-	const result: LonLat[][] = [];
-	let current: LonLat[] = [];
+	const result: Coord[][] = [];
+	let current: Coord[] = [];
 	let cIdx = 0;
 
 	for (let i = 0; i < len; i++) {
@@ -292,19 +247,19 @@ function splitRingAtAntimeridian(
 	return result;
 }
 
-function projectLonLat(
+function project(
 	lon: number,
 	lat: number,
 	width: number,
 	height: number,
-): ProjectedPoint {
+): Coord {
 	const clampedLat = Math.max(
 		PROJECTION_LAT_MIN,
 		Math.min(PROJECTION_LAT_MAX, lat),
 	);
 	const clampedLon = Math.max(-180, Math.min(180, lon));
-	return {
-		x: ((clampedLon + 180) / 360) * width,
-		y: ((PROJECTION_LAT_MAX - clampedLat) / PROJECTION_LAT_RANGE) * height,
-	};
+	return [
+		((clampedLon + 180) / 360) * width,
+		((PROJECTION_LAT_MAX - clampedLat) / PROJECTION_LAT_RANGE) * height,
+	];
 }

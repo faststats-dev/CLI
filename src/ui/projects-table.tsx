@@ -14,8 +14,8 @@ import {
 } from "solid-js";
 import type { Project } from "../data/project.ts";
 import { Divider } from "./divider.tsx";
-import { runOpenTui } from "./open-tui.ts";
-import { chartColor, theme } from "./theme.ts";
+import { runOpenTui } from "./utils/open-tui.ts";
+import { chartColor, theme } from "./utils/theme.ts";
 
 const VISIBILITY_GLYPH = { public: "○", private: "⌧" } as const;
 const ROW_HEIGHT = 3;

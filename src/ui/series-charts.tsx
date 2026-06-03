@@ -22,14 +22,14 @@ import {
 	YAxis,
 } from "./chart-axis.tsx";
 import { ChartEmptyState, type SeriesChartProps } from "./chart-shared.tsx";
+import { LineAreaChartView } from "./line-area-chart.tsx";
+import { PieChartView } from "./pie-chart.tsx";
 import {
 	renderCategoricalBarRows,
 	renderVerticalBarLines,
-} from "./chart-text-render.ts";
-import { LineAreaChartView } from "./line-area-chart.tsx";
-import { resolveLineAreaSeriesStyle } from "./line-area-chart-renderer.ts";
-import { PieChartView } from "./pie-chart.tsx";
-import { theme } from "./theme.ts";
+} from "./utils/chart-text-render.ts";
+import { resolveLineAreaSeriesStyle } from "./utils/line-area-chart-renderer.ts";
+import { theme } from "./utils/theme.ts";
 
 export interface BarChartProps extends SeriesChartProps {
 	readonly preferredChartColors: ReadonlyArray<string> | null;

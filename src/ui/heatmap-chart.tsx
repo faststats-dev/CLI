@@ -29,7 +29,7 @@ import {
 	getChartValueKeys,
 } from "../data/chart-query-utils.ts";
 import { ChartEmptyState, type SeriesChartProps } from "./chart-shared.tsx";
-import { theme } from "./theme.ts";
+import { theme } from "./utils/theme.ts";
 
 export interface HeatmapChartProps extends SeriesChartProps {
 	readonly preferredChartColors: ReadonlyArray<string> | null;

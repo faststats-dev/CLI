@@ -16,9 +16,9 @@ import { Divider } from "./divider.tsx";
 import { HeatmapChart } from "./heatmap-chart.tsx";
 import { ListChart } from "./list-chart.tsx";
 import { MapChart } from "./map-chart.tsx";
-import { runOpenTui } from "./open-tui.ts";
 import { BarChart, LineAreaChart, PieChart } from "./series-charts.tsx";
-import { chartColor, theme } from "./theme.ts";
+import { runOpenTui } from "./utils/open-tui.ts";
+import { chartColor, theme } from "./utils/theme.ts";
 import { WidgetChart } from "./widget-chart.tsx";
 
 const GRID_COLS = 12;

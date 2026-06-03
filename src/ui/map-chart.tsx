@@ -7,10 +7,10 @@ import {
 	resolveSeriesRows,
 	seriesToMapHighlights,
 } from "../data/chart-data.ts";
-import { BRAILLE_BASE, BRAILLE_DOT_BITS } from "./braille.ts";
 import { FrameBufferView } from "./chart-shared.tsx";
-import { theme } from "./theme.ts";
-import { findCountryIndex, rasterizeWorld } from "./world-map-data.ts";
+import { BRAILLE_BASE, BRAILLE_DOT_BITS } from "./utils/braille.ts";
+import { theme } from "./utils/theme.ts";
+import { findCountryIndex, rasterizeWorld } from "./utils/world-map-data.ts";
 
 export interface MapChartProps {
 	readonly accent: string;

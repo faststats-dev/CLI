@@ -1,7 +1,7 @@
 import { RGBA } from "@opentui/core";
 import { FrameBufferView } from "./chart-shared.tsx";
-import { drawPieChart, type PieSlice } from "./pie-chart-renderer.ts";
-import { theme } from "./theme.ts";
+import { drawPieChart, type PieSlice } from "./utils/pie-chart-renderer.ts";
+import { theme } from "./utils/theme.ts";
 
 export interface PieChartViewProps {
 	readonly slices: ReadonlyArray<PieSlice>;
