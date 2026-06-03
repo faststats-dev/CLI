@@ -11,6 +11,15 @@ const publishConfig = {
 	...(process.env.GITHUB_ACTIONS === "true" ? { provenance: true } : {}),
 };
 
+async function isPublished(name: string, version: string) {
+	const proc = Bun.spawn(["npm", "view", `${name}@${version}`, "version"], {
+		stdout: "pipe",
+		stderr: "pipe",
+	});
+	await proc.exited;
+	return proc.exitCode === 0;
+}
+
 async function run(command: string[], cwd: string) {
 	const proc = Bun.spawn(command, {
 		cwd,
@@ -22,6 +31,27 @@ async function run(command: string[], cwd: string) {
 		process.exit(1);
 	}
 }
+
+async function publishPackage(
+	pkgDir: string,
+	name: string,
+	publishArgs: string[],
+) {
+	if (await isPublished(name, version)) {
+		console.log(`Skipping ${name}@${version} (already on npm)`);
+		return false;
+	}
+	await run(["npm", "publish", ...publishArgs], pkgDir);
+	return true;
+}
+
+const publishArgs = [
+	"--access",
+	"public",
+	...(process.env.NPM_OTP ? ["--otp", process.env.NPM_OTP] : []),
+];
+
+let publishedAny = false;
 
 for (const platform of PLATFORMS) {
 	const pkgDir = join(npmRoot, platform.packageName.replace("@faststats/", ""));
@@ -48,16 +78,9 @@ for (const platform of PLATFORMS) {
 			2,
 		)}\n`,
 	);
-	await run(
-		[
-			"npm",
-			"publish",
-			"--access",
-			"public",
-			...(process.env.NPM_OTP ? ["--otp", process.env.NPM_OTP] : []),
-		],
-		pkgDir,
-	);
+	if (await publishPackage(pkgDir, platform.packageName, publishArgs)) {
+		publishedAny = true;
+	}
 }
 
 const optionalDependencies = Object.fromEntries(
@@ -97,14 +120,12 @@ await writeFile(
 	)}\n`,
 );
 
-await run(
-	[
-		"npm",
-		"publish",
-		"--access",
-		"public",
-		...(process.env.NPM_OTP ? ["--otp", process.env.NPM_OTP] : []),
-	],
-	mainDir,
-);
-await run(["changeset", "tag"], root);
+if (await publishPackage(mainDir, rootPackage.name, publishArgs)) {
+	publishedAny = true;
+}
+
+if (publishedAny) {
+	await run(["changeset", "tag"], root);
+} else {
+	console.log("Nothing new to publish.");
+}
