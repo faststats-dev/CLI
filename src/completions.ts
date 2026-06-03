@@ -1,6 +1,6 @@
 export type Shell = "fish" | "zsh" | "bash";
 
-export const SLUG_COMMAND_PATHS: ReadonlyArray<string> = [
+const SLUG_COMMAND_PATHS: ReadonlyArray<string> = [
 	"project show",
 	"project network list",
 	"project network add",
