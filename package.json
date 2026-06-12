@@ -36,7 +36,7 @@
 		"generate": "openapigen --spec openapi.json --format httpclient --name Api > src/api.ts"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "2.4.16",
+		"@biomejs/biome": "2.5.0",
 		"@changesets/cli": "^2.31.0",
 		"@effect/openapi-generator": "^4.0.0-beta.76",
 		"@effect/platform-bun": "^4.0.0-beta.76",
