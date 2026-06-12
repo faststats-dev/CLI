@@ -47,7 +47,7 @@
 		"@opentui/core-linux-x64": "0.3.1",
 		"@opentui/core-win32-arm64": "0.3.1",
 		"@opentui/core-win32-x64": "0.3.1",
-		"@opentui/solid": "^0.3.1",
+		"@opentui/solid": "^0.4.0",
 		"@types/bun": "latest",
 		"@types/geojson": "^7946.0.16",
 		"@types/topojson-client": "^3.1.5",
