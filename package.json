@@ -40,7 +40,7 @@
 		"@changesets/cli": "^2.31.0",
 		"@effect/openapi-generator": "^4.0.0-beta.76",
 		"@effect/platform-bun": "^4.0.0-beta.76",
-		"@opentui/core": "^0.3.1",
+		"@opentui/core": "^0.4.0",
 		"@opentui/core-darwin-arm64": "0.3.1",
 		"@opentui/core-darwin-x64": "0.3.1",
 		"@opentui/core-linux-arm64": "0.3.1",
