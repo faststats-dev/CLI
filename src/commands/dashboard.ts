@@ -1,23 +1,13 @@
 import { Effect } from "effect";
 import { Command } from "effect/unstable/cli";
-import { FastStatsApi } from "../api-client.ts";
-import type { Project } from "../data/project.ts";
+import { listDashboardProjects } from "../project-list.ts";
 import { browseDashboards } from "./browse-dashboards.ts";
 
 export const dashboardCommand = Command.make(
 	"dashboard",
 	{},
 	Effect.fnUntraced(function* () {
-		const api = yield* FastStatsApi;
-		const response = yield* api.ProjectsListProjects(undefined);
-
-		const projects: ReadonlyArray<Project> = response.items.map((item) => ({
-			id: item.id,
-			name: item.name,
-			slug: `/${item.slug}`,
-			visibility: item.private ? "private" : "public",
-			preferredChartColors: item.preferredChartColors,
-		}));
+		const projects = yield* listDashboardProjects;
 
 		yield* browseDashboards({ title: "Projects", projects });
 	}),

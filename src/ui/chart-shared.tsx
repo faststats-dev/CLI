@@ -55,7 +55,7 @@ export function FrameBufferView(props: {
 		if (!parent) return;
 
 		if (frameBuffer && (frameBuffer.width !== w || frameBuffer.height !== h)) {
-			parent.remove(frameBuffer.id);
+			parent.remove(frameBuffer);
 			frameBuffer.destroy();
 			frameBuffer = undefined;
 		}

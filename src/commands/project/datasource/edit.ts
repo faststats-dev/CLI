@@ -164,7 +164,9 @@ export const datasourceEditCommand = Command.make(
 		});
 
 		const hasFlags = Object.values(flags).some((v) => v !== undefined);
-		const payload = hasFlags ? flags : yield* promptEdits(current);
+		const payload = hasFlags
+			? { ...flags, metricShape: flags.metricShape ?? current.metricShape }
+			: yield* promptEdits(current);
 
 		const updated = yield* api.DataSourcesUpdateDataSource(
 			params.slug,

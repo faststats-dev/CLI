@@ -11,6 +11,10 @@ interface HasPermissionResponse {
 	readonly success?: boolean;
 }
 
+interface SessionResponse {
+	readonly user?: { readonly id?: string };
+}
+
 const authHeaders = (accessToken: string) => ({
 	"content-type": "application/json",
 	authorization: `Bearer ${accessToken}`,
@@ -57,6 +61,11 @@ export const listOrganizations = (authBaseUrl: string, accessToken: string) =>
 		"/organization/list",
 		{ method: "GET" },
 	);
+
+export const getSessionUserId = (authBaseUrl: string, accessToken: string) =>
+	authRequest<SessionResponse>(authBaseUrl, accessToken, "/get-session", {
+		method: "GET",
+	}).pipe(Effect.map((session) => session.user?.id));
 
 export const setActiveOrganization = (
 	authBaseUrl: string,
