@@ -18,7 +18,7 @@ export function ListChart(props: SeriesChartProps) {
 		return formatEntryNames(
 			parseSeriesEntries(
 				resolveSeriesRows(props.data, tabIndex),
-				resolveMetricKey(props.queryConfig),
+				resolveMetricKey(props.queryConfig, props.flowMeta),
 			),
 			props.flowMeta,
 			props.queryConfig,
@@ -62,7 +62,7 @@ export function ListChart(props: SeriesChartProps) {
 						</text>
 						<text fg={theme.textMuted} flexShrink={0}>
 							{truncateLabel(
-								resolveMetricKey(props.queryConfig) ?? "Value",
+								resolveMetricKey(props.queryConfig, props.flowMeta) ?? "Value",
 								formatWidgetValue(entries()[0]?.value).length,
 							)}
 						</text>

@@ -32,7 +32,7 @@
 		"install:completions": "bun run scripts/install-completions.ts fish",
 		"install:completions:zsh": "bun run scripts/install-completions.ts zsh",
 		"install:completions:bash": "bun run scripts/install-completions.ts bash",
-		"download-openapi": "curl -o openapi.json http://localhost:4000/openapi.json",
+		"download-openapi": "curl -fsS -o openapi.json https://api.faststats.dev/openapi.json",
 		"generate": "openapigen --spec openapi.json --format httpclient --name Api > src/api.ts"
 	},
 	"devDependencies": {

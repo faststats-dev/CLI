@@ -152,7 +152,11 @@ export function truncateLabel(label: string, maxLength: number): string {
 	return `${label.slice(0, maxLength - 1)}…`;
 }
 
-function formatNumber(value: number, format: "number" | "percent"): string {
+function formatNumber(
+	value: number,
+	format: "number" | "percent" | "duration_ms",
+): string {
+	if (format === "duration_ms") return formatDurationMs(value);
 	return format === "percent"
 		? `${percentFormatter.format(value)}%`
 		: numberFormatter.format(value);
@@ -160,7 +164,7 @@ function formatNumber(value: number, format: "number" | "percent"): string {
 
 export function formatWidgetValue(
 	value: string | number | null | undefined,
-	format: "number" | "percent" = "number",
+	format: "number" | "percent" | "duration_ms" = "number",
 ): string {
 	if (value == null || value === "") return "—";
 	if (typeof value === "number") {
@@ -170,7 +174,7 @@ export function formatWidgetValue(
 	if (!match) return value;
 	const numericValue = Number(match[1]);
 	if (!Number.isFinite(numericValue)) return value;
-	return `${formatNumber(numericValue, format)}${match[2] ?? ""}`;
+	return `${formatNumber(numericValue, format === "duration_ms" && match[2] ? "number" : format)}${match[2] ?? ""}`;
 }
 
 export function formatWidgetTrend(trend: number): {
@@ -189,13 +193,10 @@ export function formatWidgetTrend(trend: number): {
 }
 
 export function resolveMetricKey(
-	queryConfig: ChartQueryConfig | null | undefined,
+	_queryConfig: ChartQueryConfig | null | undefined,
+	flowMeta?: ChartFlowMetaLite | null,
 ): string | null {
-	if (!queryConfig) return null;
-	const primary = queryConfig.primaryMetric?.field;
-	if (primary) return primary;
-	const first = queryConfig.metrics?.[0]?.field;
-	return first ?? null;
+	return flowMeta?.outputs?.[0]?.primaryMetric?.field ?? null;
 }
 
 function resolveSeriesValueKey(
@@ -242,4 +243,16 @@ export function seriesToMapHighlights(
 			color: blendHexOnBackground(fillColor, theme.surface, opacity),
 		};
 	});
+}
+
+function formatDurationMs(value: number): string {
+	if (value < 0) return "—";
+	const totalSeconds = Math.round(value / 1000);
+	const hours = Math.floor(totalSeconds / 3600);
+	const minutes = Math.floor((totalSeconds % 3600) / 60);
+	const seconds = totalSeconds % 60;
+	if (hours > 0) return `${hours}h ${String(minutes).padStart(2, "0")}m`;
+	if (minutes > 0)
+		return seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`;
+	return `${seconds}s`;
 }

@@ -2,6 +2,7 @@ import { type FrameBufferRenderable, RGBA } from "@opentui/core";
 import { createMemo } from "solid-js";
 import {
 	type ChartData,
+	type ChartFlowMetaLite,
 	type ChartQueryConfig,
 	resolveMetricKey,
 	resolveSeriesRows,
@@ -17,6 +18,7 @@ export interface MapChartProps {
 	readonly innerWidth: number;
 	readonly innerHeight: number;
 	readonly data: ChartData | null;
+	readonly flowMeta: ChartFlowMetaLite | null;
 	readonly queryConfig: ChartQueryConfig | null;
 	readonly preferredChartColors: ReadonlyArray<string> | null;
 }
@@ -29,7 +31,7 @@ export function MapChart(props: MapChartProps) {
 		const map = new Map<number, RGBA>();
 		const highlights = seriesToMapHighlights(
 			resolveSeriesRows(props.data) ?? [],
-			resolveMetricKey(props.queryConfig),
+			resolveMetricKey(props.queryConfig, props.flowMeta),
 			{
 				chartColors: props.queryConfig?.visualOptions?.colors,
 				preferredChartColors: props.preferredChartColors,

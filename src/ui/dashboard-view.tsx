@@ -414,7 +414,7 @@ function ChartTile(props: {
 			body = <LineAreaChart {...series} chartType={props.chart.chartType} />;
 			break;
 		case "map":
-			body = <MapChart {...series} />;
+			body = <MapChart {...series} flowMeta={props.chart.flowMeta} />;
 			break;
 		case "heatmap":
 			body = (

@@ -46,7 +46,10 @@ export function getChartSeries({
 	outputDescriptors = [],
 }: {
 	readonly rows: SeriesRows;
-	readonly metrics: ChartQueryConfig["metrics"];
+	readonly metrics:
+		| ReadonlyArray<{ readonly field: string }>
+		| null
+		| undefined;
 	readonly outputDescriptors?: ChartFlowMetaLite["outputs"];
 }): ReadonlyArray<ChartSeriesDescriptor> {
 	const breakdownLabels = getBreakdownLabels(rows);
@@ -87,7 +90,7 @@ export interface PreparedLineAreaChartData {
 
 export function prepareLineAreaChartData(
 	rows: SeriesRows | null | undefined,
-	queryConfig: ChartQueryConfig | null | undefined,
+	_queryConfig: ChartQueryConfig | null | undefined,
 	flowMeta: ChartFlowMetaLite | null | undefined,
 ): PreparedLineAreaChartData {
 	if (rows == null || rows.length === 0) {
@@ -96,7 +99,10 @@ export function prepareLineAreaChartData(
 
 	const descriptors = getChartSeries({
 		rows,
-		metrics: queryConfig?.metrics ?? [],
+		metrics:
+			flowMeta?.outputs?.flatMap((output) =>
+				output.primaryMetric ? [output.primaryMetric] : [],
+			) ?? [],
 		outputDescriptors: flowMeta?.outputs ?? [],
 	});
 
@@ -120,10 +126,14 @@ export function prepareBarChartData(
 
 	const series = getChartSeries({
 		rows,
-		metrics: queryConfig?.metrics ?? [],
+		metrics:
+			flowMeta?.outputs?.flatMap((output) =>
+				output.primaryMetric ? [output.primaryMetric] : [],
+			) ?? [],
 		outputDescriptors: flowMeta?.outputs ?? [],
 	});
-	const metricKey = series[0]?.dataKey ?? resolveMetricKey(queryConfig);
+	const metricKey =
+		series[0]?.dataKey ?? resolveMetricKey(queryConfig, flowMeta);
 
 	return {
 		entries: parseSeriesEntries(rows, metricKey, { sort: "none" }),

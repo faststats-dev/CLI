@@ -1,6 +1,6 @@
 import { Console, Effect } from "effect";
 import { Argument, Command, Flag, Prompt } from "effect/cli";
-import type { DataSourceRecord } from "../../../api.ts";
+import type { DataSourceRecordEncoded as DataSourceRecord } from "../../../api.ts";
 import { FastStatsApi } from "../../../api-client.ts";
 import {
 	DataSourceNameSchema,

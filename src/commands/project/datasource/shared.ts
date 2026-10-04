@@ -1,6 +1,6 @@
 import { Console, Effect, Option, Record } from "effect";
 import { Prompt } from "effect/cli";
-import type { DataSourceRecord } from "../../../api.ts";
+import type { DataSourceRecordEncoded as DataSourceRecord } from "../../../api.ts";
 
 export const resolveDataSourceTarget = (
 	dataSources: ReadonlyArray<DataSourceRecord>,

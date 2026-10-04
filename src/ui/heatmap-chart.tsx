@@ -55,7 +55,10 @@ export function HeatmapChart(props: HeatmapChartProps) {
 
 		const seriesLabels = getChartSeries({
 			rows,
-			metrics: props.queryConfig?.metrics ?? [],
+			metrics:
+				props.flowMeta?.outputs?.flatMap((output) =>
+					output.primaryMetric ? [output.primaryMetric] : [],
+				) ?? [],
 			outputDescriptors: props.flowMeta?.outputs ?? [],
 		}).map((entry) => entry.label);
 		const matrix = buildHeatmapMatrix(rows, valueKeys, seriesLabels);

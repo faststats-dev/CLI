@@ -16,14 +16,12 @@ function getCountryName(code: string): string {
 
 function isCountryChart(
 	flowMeta: ChartFlowMetaLite | null | undefined,
-	queryConfig: ChartQueryConfig | null | undefined,
+	_queryConfig: ChartQueryConfig | null | undefined,
 	chartName: string | null | undefined,
 	tabIndex: number,
 ): boolean {
 	const tab = flowMeta?.outputs?.[tabIndex];
-	const groupField =
-		tab?.groupField ??
-		queryConfig?.dimensions?.find((d) => d.role === "group")?.field;
+	const groupField = tab?.groupField ?? tab?.groupFields?.[0];
 
 	return (
 		groupField === "country" ||

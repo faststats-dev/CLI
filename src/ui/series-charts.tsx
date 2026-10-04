@@ -181,7 +181,10 @@ export function PieChart(props: PieChartProps) {
 			props.queryConfig?.visualOptions?.list?.selectedTabIndex ?? 0;
 		const rows = resolveSeriesRows(props.data, tabIndex);
 		return formatEntryNames(
-			parseSeriesEntries(rows, resolveMetricKey(props.queryConfig)),
+			parseSeriesEntries(
+				rows,
+				resolveMetricKey(props.queryConfig, props.flowMeta),
+			),
 			props.flowMeta,
 			props.queryConfig,
 			props.chartName,
