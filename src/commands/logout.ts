@@ -1,5 +1,5 @@
 import { Console, Effect } from "effect";
-import { Command } from "effect/unstable/cli";
+import { Command } from "effect/cli";
 import { clearAccessToken } from "../config.ts";
 
 export const logoutCommand = Command.make(

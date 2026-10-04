@@ -1,5 +1,5 @@
 import { Console, Effect, Option } from "effect";
-import { Command, Flag, Prompt } from "effect/unstable/cli";
+import { Command, Flag, Prompt } from "effect/cli";
 import { FastStatsApi } from "../../api-client.ts";
 import {
 	hasProjectCreatePermission,
@@ -34,7 +34,7 @@ const resolveInteractiveOrganization = (
 		})),
 	];
 
-	return Prompt.select({
+	return Prompt.Select({
 		message: "Create project in",
 		choices,
 	}).pipe(
@@ -100,31 +100,31 @@ const resolveOrganizationContext = (orgFlag: Option.Option<string>) =>
 export const projectCreateCommand = Command.make(
 	"create",
 	{
-		name: Flag.string("name").pipe(
+		name: Flag.String("name").pipe(
 			Flag.withDescription("Project name"),
 			Flag.withSchema(ProjectNameSchema),
 			Flag.withFallbackPrompt(
-				Prompt.text({
+				Prompt.String({
 					message: "Project name",
 					validate: validateWithSchema(ProjectNameSchema),
 				}),
 			),
 		),
-		private: Flag.boolean("private").pipe(
+		private: Flag.Boolean("private").pipe(
 			Flag.optional,
 			Flag.withDescription("Make the project private"),
 		),
-		errorTracking: Flag.boolean("error-tracking").pipe(
+		errorTracking: Flag.Boolean("error-tracking").pipe(
 			Flag.optional,
 			Flag.withDescription("Enable error tracking"),
 		),
-		org: Flag.string("org").pipe(
+		org: Flag.String("org").pipe(
 			Flag.optional,
 			Flag.withDescription(
 				'Organization slug, id, or "personal" (requires access token)',
 			),
 		),
-		hostname: Flag.string("hostname").pipe(
+		hostname: Flag.String("hostname").pipe(
 			Flag.optional,
 			Flag.withDescription("Allowed hostname"),
 		),
@@ -140,7 +140,7 @@ export const projectCreateCommand = Command.make(
 
 		const isPrivate = yield* promptIfAbsent(
 			privateFlag,
-			Prompt.select({
+			Prompt.Select({
 				message: "Project visibility",
 				choices: [
 					{
@@ -159,7 +159,7 @@ export const projectCreateCommand = Command.make(
 
 		const errorTrackingEnabled = yield* promptIfAbsent(
 			errorTrackingFlag,
-			Prompt.confirm({
+			Prompt.Confirm({
 				message: "Enable error tracking?",
 				initial: true,
 			}),

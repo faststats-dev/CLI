@@ -1,11 +1,11 @@
 import { Console, Effect } from "effect";
-import { Argument, Command } from "effect/unstable/cli";
+import { Argument, Command } from "effect/cli";
 import { FastStatsApi } from "../../../api-client.ts";
 
 export const networkListCommand = Command.make(
 	"list",
 	{
-		slug: Argument.string("slug").pipe(
+		slug: Argument.String("slug").pipe(
 			Argument.withDescription("Project slug"),
 		),
 	},

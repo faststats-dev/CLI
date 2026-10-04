@@ -1,4 +1,4 @@
-import { Command } from "effect/unstable/cli";
+import { Command } from "effect/cli";
 import { completionsCommand } from "./commands/completions.ts";
 import { dashboardCommand } from "./commands/dashboard.ts";
 import { exploreCommand } from "./commands/explore.ts";

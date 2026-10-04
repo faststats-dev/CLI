@@ -1,18 +1,18 @@
 import { Console, Effect } from "effect";
-import { Argument, Command, Flag } from "effect/unstable/cli";
+import { Argument, Command, Flag } from "effect/cli";
 import { FastStatsApi } from "../../../api-client.ts";
 
 export const networkAddCommand = Command.make(
 	"add",
 	{
-		slug: Argument.string("slug").pipe(
+		slug: Argument.String("slug").pipe(
 			Argument.withDescription("Project slug"),
 		),
-		ip: Flag.string("ip").pipe(Flag.withDescription("IP address or CIDR")),
-		allow: Flag.boolean("allow").pipe(
+		ip: Flag.String("ip").pipe(Flag.withDescription("IP address or CIDR")),
+		allow: Flag.Boolean("allow").pipe(
 			Flag.withDescription("Allow traffic from this IP"),
 		),
-		deny: Flag.boolean("deny").pipe(
+		deny: Flag.Boolean("deny").pipe(
 			Flag.withDescription("Deny traffic from this IP"),
 		),
 	},

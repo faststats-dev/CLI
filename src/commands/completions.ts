@@ -1,5 +1,5 @@
 import { Console, Effect } from "effect";
-import { Command } from "effect/unstable/cli";
+import { Command } from "effect/cli";
 import { loadSlugsForCompletion } from "../project-slugs.ts";
 
 const completionsSlugsCommand = Command.make(

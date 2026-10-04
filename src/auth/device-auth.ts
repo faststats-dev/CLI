@@ -1,10 +1,6 @@
 import { Console, Effect, Schema } from "effect";
-import {
-	HttpBody,
-	HttpClientRequest,
-	HttpClientResponse,
-} from "effect/unstable/http";
-import { HttpClient } from "effect/unstable/http/HttpClient";
+import { HttpBody, HttpClientRequest, HttpClientResponse } from "effect/http";
+import { HttpClient } from "effect/http/HttpClient";
 import { apiUrl, saveAccessToken } from "../config.ts";
 
 const CLIENT_ID = "faststats-cli";

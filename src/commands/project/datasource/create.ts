@@ -1,5 +1,5 @@
 import { Effect, Option } from "effect";
-import { Argument, Command, Flag, Prompt } from "effect/unstable/cli";
+import { Argument, Command, Flag, Prompt } from "effect/cli";
 import { FastStatsApi } from "../../../api-client.ts";
 import { promptIfAbsent } from "../../../command-helpers.ts";
 import {
@@ -12,58 +12,58 @@ import { logDataSource, unwrapFlags } from "./shared.ts";
 export const datasourceCreateCommand = Command.make(
 	"create",
 	{
-		slug: Argument.string("slug").pipe(
+		slug: Argument.String("slug").pipe(
 			Argument.withDescription("Project slug"),
 		),
-		name: Flag.string("name").pipe(
+		name: Flag.String("name").pipe(
 			Flag.withDescription("Data source name"),
 			Flag.withSchema(DataSourceNameSchema),
 			Flag.withFallbackPrompt(
-				Prompt.text({
+				Prompt.String({
 					message: "Data source name",
 					validate: validateWithSchema(DataSourceNameSchema),
 				}),
 			),
 		),
-		referenceId: Flag.string("reference-id").pipe(
+		referenceId: Flag.String("reference-id").pipe(
 			Flag.withDescription("Reference ID (lowercase letters, numbers, _)"),
 			Flag.withSchema(ReferenceIdSchema),
 			Flag.withFallbackPrompt(
-				Prompt.text({
+				Prompt.String({
 					message: "Reference ID",
 					validate: validateWithSchema(ReferenceIdSchema),
 				}),
 			),
 		),
-		dataType: Flag.choice("data-type", ["number", "string", "boolean"]).pipe(
+		dataType: Flag.Literals("data-type", ["number", "string", "boolean"]).pipe(
 			Flag.optional,
 			Flag.withDescription("Data type: number, string, or boolean"),
 		),
-		metricShape: Flag.choice("metric-shape", ["scalar", "array", "map"]).pipe(
+		metricShape: Flag.Literals("metric-shape", ["scalar", "array", "map"]).pipe(
 			Flag.optional,
 			Flag.withDescription("Metric shape: scalar, array, or map"),
 		),
-		array: Flag.boolean("array").pipe(
+		array: Flag.Boolean("array").pipe(
 			Flag.optional,
 			Flag.withDescription("Treat values as an array"),
 		),
-		allowNegative: Flag.boolean("allow-negative").pipe(
+		allowNegative: Flag.Boolean("allow-negative").pipe(
 			Flag.optional,
 			Flag.withDescription("Allow negative numbers (number type only)"),
 		),
-		allowFloat: Flag.boolean("allow-float").pipe(
+		allowFloat: Flag.Boolean("allow-float").pipe(
 			Flag.optional,
 			Flag.withDescription("Allow floating point numbers (number type only)"),
 		),
-		regex: Flag.string("regex").pipe(
+		regex: Flag.String("regex").pipe(
 			Flag.optional,
 			Flag.withDescription("Validation regex (string type only)"),
 		),
-		minValue: Flag.float("min-value").pipe(
+		minValue: Flag.Finite("min-value").pipe(
 			Flag.optional,
 			Flag.withDescription("Minimum value (number type only)"),
 		),
-		maxValue: Flag.float("max-value").pipe(
+		maxValue: Flag.Finite("max-value").pipe(
 			Flag.optional,
 			Flag.withDescription("Maximum value (number type only)"),
 		),
@@ -83,7 +83,7 @@ export const datasourceCreateCommand = Command.make(
 	}) {
 		const dataType = yield* promptIfAbsent(
 			dataTypeFlag,
-			Prompt.select({
+			Prompt.Select({
 				message: "Data type",
 				choices: [
 					{
@@ -107,7 +107,7 @@ export const datasourceCreateCommand = Command.make(
 
 		const metricShape = yield* promptIfAbsent(
 			metricShapeFlag,
-			Prompt.select({
+			Prompt.Select({
 				message: "Metric shape",
 				choices: [
 					{
@@ -132,7 +132,7 @@ export const datasourceCreateCommand = Command.make(
 
 		const isArray = yield* promptIfAbsent(
 			arrayFlag,
-			Prompt.confirm({
+			Prompt.Confirm({
 				message: "Treat values as an array?",
 				initial: false,
 			}),
@@ -142,7 +142,7 @@ export const datasourceCreateCommand = Command.make(
 			dataType === "number"
 				? yield* promptIfAbsent(
 						allowNegativeFlag,
-						Prompt.confirm({
+						Prompt.Confirm({
 							message: "Allow negative numbers?",
 							initial: true,
 						}),
@@ -153,7 +153,7 @@ export const datasourceCreateCommand = Command.make(
 			dataType === "number"
 				? yield* promptIfAbsent(
 						allowFloatFlag,
-						Prompt.confirm({
+						Prompt.Confirm({
 							message: "Allow floating point numbers?",
 							initial: true,
 						}),

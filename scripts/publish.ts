@@ -125,7 +125,7 @@ if (await publishPackage(mainDir, rootPackage.name, publishArgs)) {
 }
 
 if (publishedAny) {
-	await run(["changeset", "tag"], root);
+	await run(["changeset", "git-tag"], root);
 } else {
 	console.log("Nothing new to publish.");
 }

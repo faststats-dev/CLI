@@ -1,5 +1,5 @@
 import { Console, Effect, Option, Record } from "effect";
-import { Prompt } from "effect/unstable/cli";
+import { Prompt } from "effect/cli";
 import type { DataSourceRecord } from "../../../api.ts";
 
 export const resolveDataSourceTarget = (
@@ -17,7 +17,7 @@ export const resolveDataSourceTarget = (
 				: Effect.fail(new Error(`Unknown data source "${ref}".`));
 		},
 		onNone: () =>
-			Prompt.select({
+			Prompt.Select({
 				message: `Select a data source to ${action}`,
 				choices: dataSources.map((item) => ({
 					title: item.name,

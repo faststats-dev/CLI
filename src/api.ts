@@ -2,10 +2,10 @@ import * as Data from "effect/Data"
 import * as Effect from "effect/Effect"
 import type { SchemaError } from "effect/Schema"
 import * as Schema from "effect/Schema"
-import type * as HttpClient from "effect/unstable/http/HttpClient"
-import * as HttpClientError from "effect/unstable/http/HttpClientError"
-import * as HttpClientRequest from "effect/unstable/http/HttpClientRequest"
-import * as HttpClientResponse from "effect/unstable/http/HttpClientResponse"
+import type * as HttpClient from "effect/http/HttpClient"
+import * as HttpClientError from "effect/http/HttpClientError"
+import * as HttpClientRequest from "effect/http/HttpClientRequest"
+import * as HttpClientResponse from "effect/http/HttpClientResponse"
 // non-recursive definitions
 export type PublicProjectStatsRecord = { readonly "projectId": string, readonly "name": string, readonly "onlineServers": number, readonly "totalServers7d": number, readonly "onlinePlayers": number }
 export const PublicProjectStatsRecord = Schema.Struct({ "projectId": Schema.String, "name": Schema.String, "onlineServers": Schema.Number.check(Schema.isFinite()).check(Schema.isGreaterThanOrEqualTo(0)), "totalServers7d": Schema.Number.check(Schema.isFinite()).check(Schema.isGreaterThanOrEqualTo(0)), "onlinePlayers": Schema.Number.check(Schema.isFinite()).check(Schema.isGreaterThanOrEqualTo(0)) }).annotate({ "description": "Public project activity stats." })

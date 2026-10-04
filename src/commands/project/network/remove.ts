@@ -1,14 +1,14 @@
 import { Console, Effect } from "effect";
-import { Argument, Command } from "effect/unstable/cli";
+import { Argument, Command } from "effect/cli";
 import { FastStatsApi } from "../../../api-client.ts";
 
 export const networkRemoveCommand = Command.make(
 	"remove",
 	{
-		slug: Argument.string("slug").pipe(
+		slug: Argument.String("slug").pipe(
 			Argument.withDescription("Project slug"),
 		),
-		ruleId: Argument.string("rule-id").pipe(
+		ruleId: Argument.String("rule-id").pipe(
 			Argument.withDescription("Network rule ID"),
 		),
 	},

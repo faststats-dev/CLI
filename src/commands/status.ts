@@ -1,5 +1,5 @@
 import { Console, Effect } from "effect";
-import { Command } from "effect/unstable/cli";
+import { Command } from "effect/cli";
 import { LOGIN_MESSAGE } from "../auth.ts";
 import { apiUrl, appUrl, loadAccessToken } from "../config.ts";
 

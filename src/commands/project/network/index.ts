@@ -1,4 +1,4 @@
-import { Command } from "effect/unstable/cli";
+import { Command } from "effect/cli";
 import { networkAddCommand } from "./add.ts";
 import { networkListCommand } from "./list.ts";
 import { networkRemoveCommand } from "./remove.ts";

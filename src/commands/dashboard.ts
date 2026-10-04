@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { Command } from "effect/unstable/cli";
+import { Command } from "effect/cli";
 import { listDashboardProjects } from "../project-list.ts";
 import { browseDashboards } from "./browse-dashboards.ts";
 

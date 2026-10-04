@@ -1,15 +1,15 @@
 import { Console, Effect } from "effect";
-import { Argument, Command } from "effect/unstable/cli";
+import { Argument, Command } from "effect/cli";
 import { FastStatsApi } from "../../../api-client.ts";
 import { resolveDataSourceTarget } from "./shared.ts";
 
 export const datasourceRemoveCommand = Command.make(
 	"remove",
 	{
-		slug: Argument.string("slug").pipe(
+		slug: Argument.String("slug").pipe(
 			Argument.withDescription("Project slug"),
 		),
-		target: Argument.string("datasource").pipe(
+		target: Argument.String("datasource").pipe(
 			Argument.optional,
 			Argument.withDescription("Data source id or reference id"),
 		),

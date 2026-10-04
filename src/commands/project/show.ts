@@ -1,12 +1,12 @@
 import { Console, Effect } from "effect";
-import { Argument, Command } from "effect/unstable/cli";
+import { Argument, Command } from "effect/cli";
 import { FastStatsApi } from "../../api-client.ts";
 import { isWebProject } from "../../project-slugs.ts";
 
 export const projectShowCommand = Command.make(
 	"show",
 	{
-		slug: Argument.string("slug").pipe(
+		slug: Argument.String("slug").pipe(
 			Argument.withDescription("Project slug"),
 		),
 	},

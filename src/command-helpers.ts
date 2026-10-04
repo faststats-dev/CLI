@@ -1,5 +1,5 @@
 import { Effect, Option } from "effect";
-import type { Prompt } from "effect/unstable/cli";
+import type { Prompt } from "effect/cli";
 
 export const promptIfAbsent = <A>(
 	value: Option.Option<A>,

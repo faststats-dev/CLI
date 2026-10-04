@@ -1,6 +1,6 @@
 import { Cause, Console, Data, Effect, Schema } from "effect";
+import * as HttpClientError from "effect/http/HttpClientError";
 import * as Stdio from "effect/Stdio";
-import * as HttpClientError from "effect/unstable/http/HttpClientError";
 import { ForbiddenError, UnauthorizedError } from "./api.ts";
 import { isApiError } from "./api-client.ts";
 import { apiUrl, loadAccessToken } from "./config.ts";

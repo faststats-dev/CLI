@@ -1,9 +1,9 @@
 import { Console, Effect } from "effect";
-import { Argument, Command } from "effect/unstable/cli";
+import { Argument, Command } from "effect/cli";
 import { FastStatsApi } from "../../api-client.ts";
 import { isWebProject } from "../../project-slugs.ts";
 
-const slugArgument = Argument.string("slug").pipe(
+const slugArgument = Argument.String("slug").pipe(
 	Argument.withDescription("Project slug"),
 );
 
@@ -37,7 +37,7 @@ const hostnamesSetCommand = Command.make(
 	"set",
 	{
 		slug: slugArgument,
-		hostnames: Argument.string("hostname").pipe(
+		hostnames: Argument.String("hostname").pipe(
 			Argument.variadic({ min: 1 }),
 			Argument.withDescription("Allowed hostnames"),
 		),

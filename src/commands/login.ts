@@ -1,4 +1,4 @@
-import { Command } from "effect/unstable/cli";
+import { Command } from "effect/cli";
 import { runDeviceLogin } from "../auth/device-auth.ts";
 
 export const loginCommand = Command.make(

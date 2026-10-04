@@ -1,4 +1,4 @@
-import { Command } from "effect/unstable/cli";
+import { Command } from "effect/cli";
 import { projectCreateCommand } from "./create.ts";
 import { datasourceCommand } from "./datasource/index.ts";
 import { hostnamesCommand } from "./hostnames.ts";

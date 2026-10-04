@@ -1,4 +1,4 @@
-import { Command } from "effect/unstable/cli";
+import { Command } from "effect/cli";
 import { datasourceCreateCommand } from "./create.ts";
 import { datasourceEditCommand } from "./edit.ts";
 import { datasourceListCommand } from "./list.ts";
