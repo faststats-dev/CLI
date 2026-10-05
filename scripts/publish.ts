@@ -1,4 +1,4 @@
-import { cp, mkdir, writeFile } from "node:fs/promises";
+import { chmod, cp, mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import rootPackage from "../package.json" with { type: "json" };
 import { PLATFORMS } from "./platforms.ts";
@@ -59,10 +59,8 @@ for (const platform of PLATFORMS) {
 	await cp(
 		join(root, "dist", platform.distFile),
 		join(pkgDir, platform.binaryName),
-		{
-			mode: 0o755,
-		},
 	);
+	await chmod(join(pkgDir, platform.binaryName), 0o755);
 	await writeFile(
 		join(pkgDir, "package.json"),
 		`${JSON.stringify(
@@ -92,10 +90,8 @@ await mkdir(join(mainDir, "bin"), { recursive: true });
 await cp(
 	join(root, "bin", "faststats.cjs"),
 	join(mainDir, "bin", "faststats.cjs"),
-	{
-		mode: 0o755,
-	},
 );
+await chmod(join(mainDir, "bin", "faststats.cjs"), 0o755);
 await cp(join(root, "README.md"), join(mainDir, "README.md"));
 await cp(join(root, "CHANGELOG.md"), join(mainDir, "CHANGELOG.md"));
 await writeFile(
