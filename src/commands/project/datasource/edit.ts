@@ -1,4 +1,4 @@
-import { Console, Effect } from "effect";
+import { Console, Effect, Option } from "effect";
 import { Argument, Command, Flag, Prompt } from "effect/cli";
 import type { DataSourceRecordEncoded as DataSourceRecord } from "../../../api.ts";
 import { FastStatsApi } from "../../../api-client.ts";
@@ -7,11 +7,7 @@ import {
 	ReferenceIdSchema,
 } from "../../../datasource-validation.ts";
 import { validateWithSchema } from "../../../validation.ts";
-import {
-	logDataSource,
-	resolveDataSourceTarget,
-	unwrapFlags,
-} from "./shared.ts";
+import { logDataSource, resolveDataSourceTarget } from "./shared.ts";
 
 type DataType = "number" | "string" | "boolean";
 type MetricShape = "scalar" | "array" | "map";
@@ -150,18 +146,18 @@ export const datasourceEditCommand = Command.make(
 			"edit",
 		);
 
-		const flags = unwrapFlags({
-			name: params.name,
-			referenceId: params.referenceId,
-			dataType: params.dataType,
-			metricShape: params.metricShape,
-			isArray: params.array,
-			allowNegative: params.allowNegative,
-			allowFloat: params.allowFloat,
-			regex: params.regex,
-			minValue: params.minValue,
-			maxValue: params.maxValue,
-		});
+		const flags = {
+			name: Option.getOrUndefined(params.name),
+			referenceId: Option.getOrUndefined(params.referenceId),
+			dataType: Option.getOrUndefined(params.dataType),
+			metricShape: Option.getOrUndefined(params.metricShape),
+			isArray: Option.getOrUndefined(params.array),
+			allowNegative: Option.getOrUndefined(params.allowNegative),
+			allowFloat: Option.getOrUndefined(params.allowFloat),
+			regex: Option.getOrUndefined(params.regex),
+			minValue: Option.getOrUndefined(params.minValue),
+			maxValue: Option.getOrUndefined(params.maxValue),
+		};
 
 		const hasFlags = Object.values(flags).some((v) => v !== undefined);
 		const payload = hasFlags

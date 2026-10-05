@@ -1,8 +1,4 @@
-import type {
-	ChartFlowMetaLite,
-	ChartQueryConfig,
-	SeriesEntry,
-} from "./chart-data.ts";
+import type { ChartFlowMetaLite, SeriesEntry } from "./chart-data.ts";
 
 const regionNames = new Intl.DisplayNames("en", { type: "region" });
 
@@ -16,7 +12,6 @@ function getCountryName(code: string): string {
 
 function isCountryChart(
 	flowMeta: ChartFlowMetaLite | null | undefined,
-	_queryConfig: ChartQueryConfig | null | undefined,
 	chartName: string | null | undefined,
 	tabIndex: number,
 ): boolean {
@@ -34,11 +29,10 @@ function isCountryChart(
 export function formatEntryNames(
 	entries: ReadonlyArray<SeriesEntry>,
 	flowMeta: ChartFlowMetaLite | null | undefined,
-	queryConfig: ChartQueryConfig | null | undefined,
 	chartName: string | null | undefined,
 	tabIndex = 0,
 ): ReadonlyArray<SeriesEntry> {
-	if (!isCountryChart(flowMeta, queryConfig, chartName, tabIndex)) {
+	if (!isCountryChart(flowMeta, chartName, tabIndex)) {
 		return entries;
 	}
 	return entries.map((entry) => ({

@@ -1,4 +1,4 @@
-import { Console, Effect, Option, Record } from "effect";
+import { Console, Effect, Option } from "effect";
 import { Prompt } from "effect/cli";
 import type { DataSourceRecordEncoded as DataSourceRecord } from "../../../api.ts";
 
@@ -38,8 +38,3 @@ export const logDataSource = (action: string, record: DataSourceRecord) =>
 			`  array:         ${record.isArray ? "yes" : "no"}`,
 		].join("\n"),
 	);
-
-export const unwrapFlags = <A extends Record<string, Option.Option<unknown>>>(
-	flags: A,
-): { [K in keyof A]: Option.Option.Value<A[K]> | undefined } =>
-	Record.map(flags, Option.getOrUndefined) as never;

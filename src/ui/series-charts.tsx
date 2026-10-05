@@ -11,7 +11,7 @@ import {
 } from "../data/chart-data.ts";
 import {
 	prepareBarChartData,
-	prepareLineAreaChartData,
+	prepareLineAreaSeries,
 } from "../data/chart-query-utils.ts";
 import { formatEntryNames } from "../data/countries.ts";
 import {
@@ -40,17 +40,12 @@ export function BarChart(props: BarChartProps) {
 		const tabIndex =
 			props.queryConfig?.visualOptions?.list?.selectedTabIndex ?? 0;
 		const rows = resolveSeriesRows(props.data, tabIndex);
-		const preparedData = prepareBarChartData(
-			rows,
-			props.queryConfig,
-			props.flowMeta,
-		);
+		const preparedData = prepareBarChartData(rows, props.flowMeta);
 		return {
 			...preparedData,
 			entries: formatEntryNames(
 				preparedData.entries,
 				props.flowMeta,
-				props.queryConfig,
 				props.chartName,
 				tabIndex,
 			),
@@ -117,10 +112,7 @@ export function BarChart(props: BarChartProps) {
 	);
 
 	return (
-		<Show
-			when={prepared().entries.length > 0}
-			fallback={<ChartEmptyState message="No data" />}
-		>
+		<Show when={prepared().entries.length > 0} fallback={<ChartEmptyState />}>
 			<box flexDirection="row" width="100%" height="100%" minHeight={0}>
 				<Show when={gutterWidth() > 0}>
 					<YAxis ticks={ticks()} width={gutterWidth()} />
@@ -181,12 +173,8 @@ export function PieChart(props: PieChartProps) {
 			props.queryConfig?.visualOptions?.list?.selectedTabIndex ?? 0;
 		const rows = resolveSeriesRows(props.data, tabIndex);
 		return formatEntryNames(
-			parseSeriesEntries(
-				rows,
-				resolveMetricKey(props.queryConfig, props.flowMeta),
-			),
+			parseSeriesEntries(rows, resolveMetricKey(props.flowMeta)),
 			props.flowMeta,
-			props.queryConfig,
 			props.chartName,
 			tabIndex,
 		);
@@ -245,10 +233,7 @@ export function PieChart(props: PieChartProps) {
 	});
 
 	return (
-		<Show
-			when={entries().length > 0}
-			fallback={<ChartEmptyState message="No data" />}
-		>
+		<Show when={entries().length > 0} fallback={<ChartEmptyState />}>
 			<Show
 				when={showPie()}
 				fallback={
@@ -330,24 +315,22 @@ export function LineAreaChart(props: LineAreaChartProps) {
 		const tabIndex =
 			props.queryConfig?.visualOptions?.list?.selectedTabIndex ?? 0;
 		const rows = resolveSeriesRows(props.data, tabIndex);
-		return prepareLineAreaChartData(rows, props.queryConfig, props.flowMeta);
+		return prepareLineAreaSeries(rows, props.flowMeta);
 	});
 	const palette = createMemo(() =>
 		resolveChartPalette(
 			props.queryConfig?.visualOptions?.colors,
 			props.preferredChartColors,
-			Math.max(prepared().series.length, 1),
+			Math.max(prepared().length, 1),
 		),
 	);
 	const styledSeries = createMemo(() =>
-		prepared().series.map((entry, index) => {
+		prepared().map((entry, index) => {
 			const lineColor = getChartColor(palette(), index);
 			const colors = resolveLineAreaSeriesStyle(lineColor);
 			return {
-				label: entry.label,
-				values: entry.values,
-				lineColor: colors.lineColor,
-				fillColor: colors.fillColor,
+				...entry,
+				...colors,
 			};
 		}),
 	);

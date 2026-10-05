@@ -1,62 +1,23 @@
-const dark = {
-	background: "#0d0d0d",
-	foreground: "#fafafa",
-	card: "#171717",
-	cardForeground: "#fafafa",
-	popover: "#171717",
-	popoverForeground: "#fafafa",
-	primary: "#ff6900",
-	primaryForeground: "#fff7ed",
-	secondary: "#27272a",
-	secondaryForeground: "#fafafa",
-	muted: "#262626",
-	mutedForeground: "#a1a1a1",
-	accent: "#404040",
-	accentForeground: "#fafafa",
-	destructive: "#ff6467",
-	ring: "#737373",
-	chart1: "#ffb86a",
-	chart2: "#ff6900",
-	chart3: "#f54900",
-	chart4: "#ca3500",
-	chart5: "#9f2d00",
-	sidebar: "#171717",
-	sidebarForeground: "#fafafa",
-	sidebarPrimary: "#ff6900",
-	sidebarPrimaryForeground: "#fff7ed",
-	sidebarAccent: "#262626",
-	sidebarAccentForeground: "#fafafa",
-	sidebarRing: "#737373",
-} as const;
-
-const tokens = {
-	...dark,
-	border: "#252525",
-	input: "#313131",
-	sidebarBorder: "#2e2e2e",
-	success: "#3cbd4b",
-} as const;
-
 export const theme = {
-	bg: tokens.background,
-	surface: tokens.card,
-	muted: tokens.muted,
-	border: tokens.border,
+	bg: "#0d0d0d",
+	surface: "#171717",
+	muted: "#262626",
+	border: "#252525",
 	borderStrong: "#3d3d3d",
-	text: tokens.foreground,
-	textBright: tokens.foreground,
-	textDim: tokens.mutedForeground,
-	textMuted: tokens.mutedForeground,
-	selectedBg: tokens.accent,
-	selectedAccent: tokens.primary,
-	success: tokens.success,
-	danger: tokens.destructive,
+	text: "#fafafa",
+	textBright: "#fafafa",
+	textDim: "#a1a1a1",
+	textMuted: "#a1a1a1",
+	selectedBg: "#404040",
+	selectedAccent: "#ff6900",
+	success: "#3cbd4b",
+	danger: "#ff6467",
 	chartPalette: [
-		tokens.chart1,
-		tokens.chart2,
-		tokens.chart3,
-		tokens.chart4,
-		tokens.chart5,
+		"#ffb86a",
+		"#ff6900",
+		"#f54900",
+		"#ca3500",
+		"#9f2d00",
 	] as const,
 } as const;
 
@@ -64,5 +25,5 @@ export function chartColor(index: number): string {
 	const palette = theme.chartPalette;
 	const safeIndex =
 		((index % palette.length) + palette.length) % palette.length;
-	return palette[safeIndex] ?? tokens.primary;
+	return palette[safeIndex] ?? "#ff6900";
 }

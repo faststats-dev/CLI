@@ -7,7 +7,7 @@ import {
 	ReferenceIdSchema,
 } from "../../../datasource-validation.ts";
 import { validateWithSchema } from "../../../validation.ts";
-import { logDataSource, unwrapFlags } from "./shared.ts";
+import { logDataSource } from "./shared.ts";
 
 export const datasourceCreateCommand = Command.make(
 	"create",
@@ -170,7 +170,9 @@ export const datasourceCreateCommand = Command.make(
 				isArray,
 				allowNegative,
 				allowFloat,
-				...unwrapFlags({ regex, minValue, maxValue }),
+				regex: Option.getOrUndefined(regex),
+				minValue: Option.getOrUndefined(minValue),
+				maxValue: Option.getOrUndefined(maxValue),
 			},
 		});
 

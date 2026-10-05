@@ -53,14 +53,9 @@ export function HeatmapChart(props: HeatmapChartProps) {
 		const valueKeys = getChartValueKeys(rows);
 		if (valueKeys.length === 0) return null;
 
-		const seriesLabels = getChartSeries({
-			rows,
-			metrics:
-				props.flowMeta?.outputs?.flatMap((output) =>
-					output.primaryMetric ? [output.primaryMetric] : [],
-				) ?? [],
-			outputDescriptors: props.flowMeta?.outputs ?? [],
-		}).map((entry) => entry.label);
+		const seriesLabels = getChartSeries(rows, props.flowMeta).map(
+			(entry) => entry.label,
+		);
 		const matrix = buildHeatmapMatrix(rows, valueKeys, seriesLabels);
 		const legendRows = props.showLegend === false ? 0 : 1;
 		const maxRows = Math.min(
@@ -90,7 +85,7 @@ export function HeatmapChart(props: HeatmapChartProps) {
 	});
 
 	return (
-		<Show when={prepared()} fallback={<ChartEmptyState message="No data" />}>
+		<Show when={prepared()} fallback={<ChartEmptyState />}>
 			{(data: () => PreparedHeatmapChart) => (
 				<HeatmapChartBody
 					innerWidth={props.innerWidth}

@@ -90,10 +90,9 @@ export const runDeviceLogin = Effect.gen(function* () {
 	const body =
 		yield* HttpClientResponse.schemaBodyJson(DeviceCodeResponse)(device);
 
-	yield* Console.log(
-		`Open this URL: ${`${body.verification_uri}?user_code=${body.user_code}`}`,
-	);
-	yield* openBrowser(`${body.verification_uri}?user_code=${body.user_code}`);
+	const verificationUrl = `${body.verification_uri}?user_code=${body.user_code}`;
+	yield* Console.log(`Open this URL: ${verificationUrl}`);
+	yield* openBrowser(verificationUrl);
 	yield* Console.log("Waiting for approval...");
 
 	const accessToken = yield* pollForToken(body.device_code, body.interval ?? 5);

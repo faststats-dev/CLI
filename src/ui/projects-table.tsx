@@ -4,14 +4,7 @@ import {
 	TextAttributes,
 } from "@opentui/core";
 import { render, useKeyboard } from "@opentui/solid";
-import {
-	type Accessor,
-	createEffect,
-	createMemo,
-	createSignal,
-	For,
-	Show,
-} from "solid-js";
+import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
 import type { Project } from "../data/project.ts";
 import { Divider } from "./divider.tsx";
 import { runOpenTui } from "./utils/open-tui.ts";
@@ -91,7 +84,17 @@ function ProjectsApp(props: ProjectsAppProps) {
 	const visibleProjects = createMemo(() =>
 		filterProjects(props.options.projects, searchQuery()),
 	);
-	const list = useSelectableList(() => visibleProjects().length);
+	const [selectedIndex, setSelectedIndex] = createSignal(0);
+	let scrollTarget: ScrollBoxRenderable | undefined;
+	const goTo = (next: number) =>
+		setSelectedIndex(
+			Math.min(Math.max(0, visibleProjects().length - 1), Math.max(0, next)),
+		);
+
+	createEffect(() => {
+		visibleProjects().length;
+		scrollTarget?.scrollTo({ x: 0, y: selectedIndex() * ROW_STRIDE });
+	});
 
 	useKeyboard((key) => {
 		if (key.name === "backspace") {
@@ -114,7 +117,7 @@ function ProjectsApp(props: ProjectsAppProps) {
 		}
 
 		if (key.name === "return" || key.name === "space") {
-			const project = visibleProjects()[list.index()];
+			const project = visibleProjects()[selectedIndex()];
 			if (project) props.onDone({ kind: "selected", project });
 			return;
 		}
@@ -140,14 +143,14 @@ function ProjectsApp(props: ProjectsAppProps) {
 		};
 
 		const action = navigation[key.name];
-		if (action === "start") list.goTo(0);
-		else if (action === "end") list.goTo(visibleProjects().length - 1);
-		else if (typeof action === "number") list.moveBy(action);
+		if (action === "start") goTo(0);
+		else if (action === "end") goTo(visibleProjects().length - 1);
+		else if (typeof action === "number") goTo(selectedIndex() + action);
 	});
 
 	createEffect(() => {
 		searchQuery();
-		list.goTo(0);
+		goTo(0);
 	});
 
 	return (
@@ -163,7 +166,9 @@ function ProjectsApp(props: ProjectsAppProps) {
 			<ColumnLabels />
 			<Divider />
 			<scrollbox
-				ref={list.bindScrollTarget}
+				ref={(element) => {
+					scrollTarget = element;
+				}}
 				flexGrow={1}
 				flexShrink={1}
 				minHeight={0}
@@ -197,7 +202,7 @@ function ProjectsApp(props: ProjectsAppProps) {
 								<ProjectRow
 									project={project}
 									accent={chartColor(index())}
-									selected={index() === list.index()}
+									selected={index() === selectedIndex()}
 								/>
 							)}
 						</For>
@@ -212,30 +217,6 @@ function ProjectsApp(props: ProjectsAppProps) {
 			/>
 		</box>
 	);
-}
-
-function useSelectableList(itemCount: Accessor<number>) {
-	const [index, setIndex] = createSignal(0);
-	let scrollTarget: ScrollBoxRenderable | undefined;
-
-	const clamp = (value: number) => {
-		const max = Math.max(0, itemCount() - 1);
-		return Math.min(max, Math.max(0, value));
-	};
-
-	createEffect(() => {
-		itemCount();
-		scrollTarget?.scrollTo({ x: 0, y: index() * ROW_STRIDE });
-	});
-
-	return {
-		index,
-		goTo: (next: number) => setIndex(clamp(next)),
-		moveBy: (delta: number) => setIndex((current) => clamp(current + delta)),
-		bindScrollTarget: (element: ScrollBoxRenderable | undefined) => {
-			scrollTarget = element;
-		},
-	};
 }
 
 function Header(props: { title: string; searchQuery: string }) {

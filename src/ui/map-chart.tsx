@@ -31,7 +31,7 @@ export function MapChart(props: MapChartProps) {
 		const map = new Map<number, RGBA>();
 		const highlights = seriesToMapHighlights(
 			resolveSeriesRows(props.data) ?? [],
-			resolveMetricKey(props.queryConfig, props.flowMeta),
+			resolveMetricKey(props.flowMeta),
 			{
 				chartColors: props.queryConfig?.visualOptions?.colors,
 				preferredChartColors: props.preferredChartColors,

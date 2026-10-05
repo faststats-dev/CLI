@@ -109,7 +109,7 @@ function rowsToEntries(
 	if (valueKey == null) return [];
 	const entries: SeriesEntry[] = [];
 	for (const row of rows) {
-		const value = Number(row[valueKey]) ?? 0;
+		const value = Number(row[valueKey]);
 		if (Number.isFinite(value)) entries.push({ name: row.name, value });
 	}
 	return entries;
@@ -193,7 +193,6 @@ export function formatWidgetTrend(trend: number): {
 }
 
 export function resolveMetricKey(
-	_queryConfig: ChartQueryConfig | null | undefined,
 	flowMeta?: ChartFlowMetaLite | null,
 ): string | null {
 	return flowMeta?.outputs?.[0]?.primaryMetric?.field ?? null;

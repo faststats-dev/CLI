@@ -1,6 +1,5 @@
 import type {
 	ChartFlowMetaLite,
-	ChartQueryConfig,
 	SeriesEntry,
 	SeriesRows,
 } from "./chart-data.ts";
@@ -40,21 +39,16 @@ function getBreakdownLabels(rows: SeriesRows): Map<string, string> {
 	return labels;
 }
 
-export function getChartSeries({
-	rows,
-	metrics,
-	outputDescriptors = [],
-}: {
-	readonly rows: SeriesRows;
-	readonly metrics:
-		| ReadonlyArray<{ readonly field: string }>
-		| null
-		| undefined;
-	readonly outputDescriptors?: ChartFlowMetaLite["outputs"];
-}): ReadonlyArray<ChartSeriesDescriptor> {
+export function getChartSeries(
+	rows: SeriesRows,
+	flowMeta: ChartFlowMetaLite | null | undefined,
+): ReadonlyArray<ChartSeriesDescriptor> {
+	const outputDescriptors = flowMeta?.outputs ?? [];
+	const metricList = outputDescriptors.flatMap((output) =>
+		output.primaryMetric ? [output.primaryMetric] : [],
+	);
 	const breakdownLabels = getBreakdownLabels(rows);
 	const dataKeys = getChartValueKeys(rows);
-	const metricList = metrics ?? [];
 	const keys =
 		dataKeys.length > 0
 			? dataKeys
@@ -79,44 +73,29 @@ export interface PreparedBarChartData {
 	readonly useDynamicColors: boolean;
 }
 
-interface PreparedLineAreaSeries {
+interface LineAreaSeries {
 	readonly label: string;
 	readonly values: ReadonlyArray<number>;
 }
 
-export interface PreparedLineAreaChartData {
-	readonly series: ReadonlyArray<PreparedLineAreaSeries>;
-}
-
-export function prepareLineAreaChartData(
+export function prepareLineAreaSeries(
 	rows: SeriesRows | null | undefined,
-	_queryConfig: ChartQueryConfig | null | undefined,
 	flowMeta: ChartFlowMetaLite | null | undefined,
-): PreparedLineAreaChartData {
+): ReadonlyArray<LineAreaSeries> {
 	if (rows == null || rows.length === 0) {
-		return { series: [] };
+		return [];
 	}
 
-	const descriptors = getChartSeries({
-		rows,
-		metrics:
-			flowMeta?.outputs?.flatMap((output) =>
-				output.primaryMetric ? [output.primaryMetric] : [],
-			) ?? [],
-		outputDescriptors: flowMeta?.outputs ?? [],
-	});
+	const descriptors = getChartSeries(rows, flowMeta);
 
-	return {
-		series: descriptors.map(({ dataKey, label }) => ({
-			label,
-			values: rows.map((row) => Number(row[dataKey]) || 0),
-		})),
-	};
+	return descriptors.map(({ dataKey, label }) => ({
+		label,
+		values: rows.map((row) => Number(row[dataKey]) || 0),
+	}));
 }
 
 export function prepareBarChartData(
 	rows: SeriesRows | null | undefined,
-	queryConfig: ChartQueryConfig | null | undefined,
 	flowMeta: ChartFlowMetaLite | null | undefined,
 ): PreparedBarChartData {
 	if (rows == null || rows.length === 0) {
@@ -124,16 +103,8 @@ export function prepareBarChartData(
 	}
 	const isTimeGrouped = flowMeta?.hasTimeGroup ?? false;
 
-	const series = getChartSeries({
-		rows,
-		metrics:
-			flowMeta?.outputs?.flatMap((output) =>
-				output.primaryMetric ? [output.primaryMetric] : [],
-			) ?? [],
-		outputDescriptors: flowMeta?.outputs ?? [],
-	});
-	const metricKey =
-		series[0]?.dataKey ?? resolveMetricKey(queryConfig, flowMeta);
+	const series = getChartSeries(rows, flowMeta);
+	const metricKey = series[0]?.dataKey ?? resolveMetricKey(flowMeta);
 
 	return {
 		entries: parseSeriesEntries(rows, metricKey, { sort: "none" }),
