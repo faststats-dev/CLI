@@ -15,12 +15,6 @@ interface SessionResponse {
 	readonly user?: { readonly id?: string };
 }
 
-const authHeaders = (accessToken: string) => ({
-	"content-type": "application/json",
-	authorization: `Bearer ${accessToken}`,
-	"user-agent": "FastStats CLI",
-});
-
 const authRequest = <T>(
 	authBaseUrl: string,
 	accessToken: string,
@@ -32,7 +26,9 @@ const authRequest = <T>(
 			const response = await fetch(`${authBaseUrl}${path}`, {
 				...init,
 				headers: {
-					...authHeaders(accessToken),
+					"content-type": "application/json",
+					authorization: `Bearer ${accessToken}`,
+					"user-agent": "FastStats CLI",
 					...(init.headers ?? {}),
 				},
 			});

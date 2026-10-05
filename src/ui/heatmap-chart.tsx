@@ -42,6 +42,15 @@ interface PreparedHeatmapChart {
 	readonly intensityScale: HeatmapIntensityScale;
 }
 
+interface HeatmapDisplayProps {
+	readonly innerWidth: number;
+	readonly innerHeight: number;
+	readonly displayMatrix: HeatmapMatrix;
+	readonly intensityFills: readonly string[];
+	readonly intensityScale: HeatmapIntensityScale;
+	readonly showLegend: boolean;
+}
+
 export function HeatmapChart(props: HeatmapChartProps) {
 	const prepared = createMemo((): PreparedHeatmapChart | null => {
 		const rows = resolveSeriesRows(
@@ -88,12 +97,9 @@ export function HeatmapChart(props: HeatmapChartProps) {
 		<Show when={prepared()} fallback={<ChartEmptyState />}>
 			{(data: () => PreparedHeatmapChart) => (
 				<HeatmapChartBody
+					{...data()}
 					innerWidth={props.innerWidth}
 					innerHeight={props.innerHeight}
-					displayMatrix={data().displayMatrix}
-					layout={data().layout}
-					intensityFills={data().intensityFills}
-					intensityScale={data().intensityScale}
 					showLegend={props.showLegend ?? true}
 				/>
 			)}
@@ -101,49 +107,20 @@ export function HeatmapChart(props: HeatmapChartProps) {
 	);
 }
 
-function HeatmapChartBody(props: {
-	readonly innerWidth: number;
-	readonly innerHeight: number;
-	readonly displayMatrix: HeatmapMatrix;
-	readonly layout: HeatmapLayout;
-	readonly intensityFills: readonly string[];
-	readonly intensityScale: HeatmapIntensityScale;
-	readonly showLegend: boolean;
-}) {
+function HeatmapChartBody(
+	props: HeatmapDisplayProps & { readonly layout: HeatmapLayout },
+) {
 	return (
 		<Show
 			when={props.layout === "mosaic"}
-			fallback={
-				<HeatmapGridChart
-					innerWidth={props.innerWidth}
-					innerHeight={props.innerHeight}
-					displayMatrix={props.displayMatrix}
-					intensityFills={props.intensityFills}
-					intensityScale={props.intensityScale}
-					showLegend={props.showLegend}
-				/>
-			}
+			fallback={<HeatmapGridChart {...props} />}
 		>
-			<HeatmapMosaicChart
-				innerWidth={props.innerWidth}
-				innerHeight={props.innerHeight}
-				displayMatrix={props.displayMatrix}
-				intensityFills={props.intensityFills}
-				intensityScale={props.intensityScale}
-				showLegend={props.showLegend}
-			/>
+			<HeatmapMosaicChart {...props} />
 		</Show>
 	);
 }
 
-function HeatmapMosaicChart(props: {
-	readonly innerWidth: number;
-	readonly innerHeight: number;
-	readonly displayMatrix: HeatmapMatrix;
-	readonly intensityFills: readonly string[];
-	readonly intensityScale: HeatmapIntensityScale;
-	readonly showLegend: boolean;
-}) {
+function HeatmapMosaicChart(props: HeatmapDisplayProps) {
 	const items = createMemo(() => getHeatmapMosaicItems(props.displayMatrix));
 	const columnCount = createMemo(() =>
 		getHeatmapMosaicColumnCount(items().length),
@@ -226,14 +203,7 @@ function HeatmapMosaicChart(props: {
 	);
 }
 
-function HeatmapGridChart(props: {
-	readonly innerWidth: number;
-	readonly innerHeight: number;
-	readonly displayMatrix: HeatmapMatrix;
-	readonly intensityFills: readonly string[];
-	readonly intensityScale: HeatmapIntensityScale;
-	readonly showLegend: boolean;
-}) {
+function HeatmapGridChart(props: HeatmapDisplayProps) {
 	const labelColW = 7;
 	const headerH = 1;
 	const legendH = () => (props.showLegend ? 1 : 0);

@@ -88,10 +88,11 @@ export const runCli = <A, E, R>(program: Effect.Effect<A, E, R>) =>
 		return yield* program;
 	}).pipe(
 		Effect.catchCause((cause) => {
-			const message = failureMessage(Cause.squash(cause));
+			const error = Cause.squash(cause);
+			const message = failureMessage(error);
 			if (!message) return Effect.failCause(cause);
 			return Console.error(message).pipe(
-				Effect.andThen(Effect.fail(Cause.squash(cause) as E)),
+				Effect.andThen(Effect.fail(error as E)),
 			);
 		}),
 	);

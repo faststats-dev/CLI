@@ -1,8 +1,5 @@
 import { Effect } from "effect";
-import type {
-	ProjectsListProjects200,
-	ProjectsListPublicProjects200,
-} from "./api.ts";
+import type { ProjectsListPublicProjects200 } from "./api.ts";
 import { FastStatsApi } from "./api-client.ts";
 import {
 	getSessionUserId,
@@ -11,7 +8,6 @@ import {
 import { authContext } from "./auth.ts";
 import type { Project } from "./data/project.ts";
 
-type PrivateProject = ProjectsListProjects200["items"][number];
 type PublicProject = ProjectsListPublicProjects200["items"][number];
 
 const listPublicProjectsForOwner = (ownerId: string) =>
@@ -48,22 +44,6 @@ const listOwnedPublicProjects = Effect.gen(function* () {
 	}).pipe(Effect.map((pages) => pages.flat()));
 }).pipe(Effect.catch(() => Effect.succeed([] as ReadonlyArray<PublicProject>)));
 
-const fromPrivateProject = (project: PrivateProject): Project => ({
-	id: project.id,
-	name: project.name,
-	slug: `/${project.slug}`,
-	visibility: project.private ? "private" : "public",
-	preferredChartColors: project.preferredChartColors,
-});
-
-const fromPublicProject = (project: PublicProject): Project => ({
-	id: project.id,
-	name: project.name,
-	slug: `/${project.slug}`,
-	visibility: "public",
-	preferredChartColors: null,
-});
-
 export const listDashboardProjects = Effect.gen(function* () {
 	const api = yield* FastStatsApi;
 	const [response, ownedPublicProjects] = yield* Effect.all([
@@ -73,11 +53,23 @@ export const listDashboardProjects = Effect.gen(function* () {
 	const projects = new Map<string, Project>();
 
 	for (const project of response.items) {
-		projects.set(project.id, fromPrivateProject(project));
+		projects.set(project.id, {
+			id: project.id,
+			name: project.name,
+			slug: `/${project.slug}`,
+			visibility: project.private ? "private" : "public",
+			preferredChartColors: project.preferredChartColors,
+		});
 	}
 	for (const project of ownedPublicProjects) {
 		if (!projects.has(project.id))
-			projects.set(project.id, fromPublicProject(project));
+			projects.set(project.id, {
+				id: project.id,
+				name: project.name,
+				slug: `/${project.slug}`,
+				visibility: "public",
+				preferredChartColors: null,
+			});
 	}
 
 	return [...projects.values()].sort((a, b) =>

@@ -11,12 +11,6 @@ import {
 
 type Coord = readonly [number, number];
 
-interface CountryFeature {
-	readonly id: string;
-	readonly name: string;
-	readonly geometry: Polygon | MultiPolygon;
-}
-
 const topology = worldTopology as unknown as Topology;
 const countriesObject = topology.objects.countries as GeometryCollection;
 const featureCollection = feature(
@@ -24,22 +18,20 @@ const featureCollection = feature(
 	countriesObject,
 ) as FeatureCollection<Polygon | MultiPolygon, { name?: string }>;
 
-const EXCLUDED_IDS = new Set(["010"]);
-
 const PROJECTION_LAT_MAX = 85;
 const PROJECTION_LAT_MIN = -58;
 const PROJECTION_LAT_RANGE = PROJECTION_LAT_MAX - PROJECTION_LAT_MIN;
 
 const COUNTRY_INDEX_BY_ID = new Map<string, number>();
 const COUNTRY_INDEX_BY_NAME = new Map<string, number>();
-const COUNTRIES: CountryFeature[] = [];
+const COUNTRY_GEOMETRIES: Array<Polygon | MultiPolygon> = [];
 
 for (const [index, f] of featureCollection.features.entries()) {
 	const id = String(f.id ?? index);
-	if (EXCLUDED_IDS.has(id)) continue;
+	if (id === "010") continue; // Antarctica
 	const name = f.properties?.name ?? "";
-	const i = COUNTRIES.length;
-	COUNTRIES.push({ id, name, geometry: f.geometry });
+	const i = COUNTRY_GEOMETRIES.length;
+	COUNTRY_GEOMETRIES.push(f.geometry);
 	COUNTRY_INDEX_BY_ID.set(id, i);
 	if (name) COUNTRY_INDEX_BY_NAME.set(name.toLowerCase(), i);
 }
@@ -87,10 +79,10 @@ export function rasterizeWorld(width: number, height: number): RasterizedMap {
 	}
 
 	const pixels = new Int32Array(width * height);
-	for (let i = 0; i < COUNTRIES.length; i++) {
-		const country = COUNTRIES[i];
-		if (!country) continue;
-		rasterizeGeometry(country.geometry, width, height, i + 1, pixels);
+	for (let i = 0; i < COUNTRY_GEOMETRIES.length; i++) {
+		const geometry = COUNTRY_GEOMETRIES[i];
+		if (!geometry) continue;
+		rasterizeGeometry(geometry, width, height, i + 1, pixels);
 	}
 
 	const result: RasterizedMap = { width, height, pixels };
@@ -217,7 +209,6 @@ function splitRingAtAntimeridian(
 		return [ring.map((p) => [p[0] ?? 0, p[1] ?? 0] as Coord)];
 	}
 
-	const sorted = [...crossings].sort((a, b) => a.edgeIdx - b.edgeIdx);
 	const result: Coord[][] = [];
 	let current: Coord[] = [];
 	let cIdx = 0;
@@ -226,7 +217,7 @@ function splitRingAtAntimeridian(
 		const p = ring[i];
 		if (!p) continue;
 		current.push([p[0] ?? 0, p[1] ?? 0]);
-		const c = sorted[cIdx];
+		const c = crossings[cIdx];
 		if (c?.edgeIdx === i) {
 			const exitLon = c.goingEast ? 180 : -180;
 			const entryLon = c.goingEast ? -180 : 180;

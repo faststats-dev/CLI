@@ -26,6 +26,10 @@ export function ListChart(props: SeriesChartProps) {
 		);
 	});
 
+	const maxValue = createMemo(() =>
+		Math.max(...entries().map((entry) => entry.value)),
+	);
+
 	let scrollBox: ScrollBoxRenderable | undefined;
 	const handleScroll = (event: MouseEvent) => {
 		if (!scrollBox) return;
@@ -49,15 +53,7 @@ export function ListChart(props: SeriesChartProps) {
 						backgroundColor={theme.muted}
 					>
 						<text fg={theme.textMuted} flexGrow={1} flexShrink={1}>
-							{truncateLabel(
-								"Name",
-								Math.max(
-									8,
-									props.innerWidth -
-										formatWidgetValue(entries()[0]?.value).length -
-										1,
-								),
-							)}
+							Name
 						</text>
 						<text fg={theme.textMuted} flexShrink={0}>
 							{truncateLabel(
@@ -95,9 +91,8 @@ export function ListChart(props: SeriesChartProps) {
 							<ListRow
 								name={entry.name}
 								value={entry.value}
-								maxValue={Math.max(...entries().map((entry) => entry.value))}
+								maxValue={maxValue()}
 								innerWidth={props.innerWidth}
-								valueWidth={formatWidgetValue(entry.value).length}
 							/>
 						)}
 					</For>
@@ -112,8 +107,8 @@ function ListRow(props: {
 	readonly value: number;
 	readonly maxValue: number;
 	readonly innerWidth: number;
-	readonly valueWidth: number;
 }) {
+	const valueWidth = createMemo(() => formatWidgetValue(props.value).length);
 	const fillWidth = createMemo(() => {
 		if (props.maxValue <= 0) return 0;
 		const ratio = props.value / props.maxValue;
@@ -123,7 +118,7 @@ function ListRow(props: {
 		);
 	});
 	const nameMax = createMemo(() =>
-		Math.max(4, props.innerWidth - props.valueWidth - 1),
+		Math.max(4, props.innerWidth - valueWidth() - 1),
 	);
 	const segments = createMemo(() =>
 		buildListRowSegments({
@@ -131,7 +126,7 @@ function ListRow(props: {
 			value: props.value,
 			fillWidth: fillWidth(),
 			innerWidth: props.innerWidth,
-			valueWidth: props.valueWidth,
+			valueWidth: valueWidth(),
 			nameMax: nameMax(),
 		}),
 	);
@@ -181,9 +176,6 @@ function buildListRowSegments(options: {
 	for (let index = 0; index < name.length; index++) {
 		chars[index] = name[index] ?? " ";
 		fg[index] = theme.text;
-		if (index < options.fillWidth) {
-			bg[index] = theme.muted;
-		}
 	}
 
 	const valueText = formatWidgetValue(options.value).padStart(
@@ -205,35 +197,20 @@ function compressListRowSegments(
 	fg: ReadonlyArray<string | undefined>,
 	bg: ReadonlyArray<string | undefined>,
 ): ReadonlyArray<ListRowSegment> {
-	if (chars.length === 0) return [];
-
-	const segments: ListRowSegment[] = [];
-	let text = chars[0] ?? "";
-	let currentFg = fg[0];
-	let currentBg = bg[0];
-
-	for (let index = 1; index < chars.length; index++) {
-		const nextFg = fg[index];
-		const nextBg = bg[index];
-		if (nextFg === currentFg && nextBg === currentBg) {
-			text += chars[index];
-			continue;
+	const segments: Array<{ text: string; fg?: string; bg?: string }> = [];
+	for (let index = 0; index < chars.length; index++) {
+		const previous = segments.at(-1);
+		const color = fg[index];
+		const background = bg[index];
+		if (previous && previous.fg === color && previous.bg === background) {
+			previous.text += chars[index];
+		} else {
+			segments.push({
+				text: chars[index] ?? "",
+				...(color ? { fg: color } : {}),
+				...(background ? { bg: background } : {}),
+			});
 		}
-		segments.push({
-			text,
-			...(currentFg ? { fg: currentFg } : {}),
-			...(currentBg ? { bg: currentBg } : {}),
-		});
-		text = chars[index] ?? "";
-		currentFg = nextFg;
-		currentBg = nextBg;
 	}
-
-	segments.push({
-		text,
-		...(currentFg ? { fg: currentFg } : {}),
-		...(currentBg ? { bg: currentBg } : {}),
-	});
-
 	return segments;
 }
