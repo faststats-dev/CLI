@@ -33,6 +33,8 @@ export const saveAccessToken = (accessToken: string) =>
 				service: SERVICE,
 				name: ACCESS_TOKEN,
 				value: accessToken,
+				// Avoid macOS prompts; other apps can also read this Keychain entry.
+				allowUnrestrictedAccess: true,
 			});
 			accessTokenPromise = Promise.resolve(accessToken);
 		},
