@@ -1,5 +1,11 @@
 # @faststats/cli
 
+## 0.1.2
+
+### Patch Changes
+
+- 427b6ba: Avoid repeated macOS Keychain prompts. Run `faststats login` once after updating. Credentials stay encrypted, but other apps running as your user can read the entry.
+
 ## 0.1.1
 
 ### Patch Changes
